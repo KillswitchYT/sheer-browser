@@ -13,7 +13,8 @@ val ksPath: String? = System.getenv("SHEER_KEYSTORE")
 
 android {
     namespace = "com.killswitch.sheer"
-    compileSdk = 37
+    // GeckoView 160 is built against Android 37.2 and refuses anything older. The runner image already has that platform.
+    compileSdk { version = release(37) { minorApiLevel = 2 } }
     buildToolsVersion = "37.0.0"
 
     defaultConfig {

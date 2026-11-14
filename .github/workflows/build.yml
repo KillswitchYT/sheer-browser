@@ -28,7 +28,7 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      # The runner image ships an Android SDK. Accept licences and make sure platform 37 and build-tools 37 are there.
+      # The runner image ships an Android SDK with platform 37.2 and build-tools 37.0.0. Accept licences and list what is installed.
       - name: Prepare Android SDK
         continue-on-error: true
         run: |
@@ -37,7 +37,6 @@ jobs:
             echo "SDK=$SDK  java=$(java -version 2>&1 | head -1)"
             SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
             yes | "$SM" --licenses > /dev/null || yes | sudo env "PATH=$PATH" "JAVA_HOME=$JAVA_HOME" "$SM" --licenses > /dev/null || true
-            "$SM" "platforms;android-37" "build-tools;37.0.0" || sudo env "PATH=$PATH" "JAVA_HOME=$JAVA_HOME" "$SM" "platforms;android-37" "build-tools;37.0.0" || echo "sdkmanager could not install them, Gradle will try on its own"
             echo "--- installed:"; ls "$SDK/platforms" "$SDK/build-tools" || true
             echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           } 2>&1 | tee sdk.log

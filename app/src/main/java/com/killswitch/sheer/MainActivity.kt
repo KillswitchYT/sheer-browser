@@ -18,6 +18,28 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        // If the app died last time, say why before starting anything, so the report can be read even if it would die again.
+        val report = CrashLog.pending(this)
+        if (report != null) showReport(report) { start(b) } else start(b)
+    }
+
+    private fun showReport(report: String, then: () -> Unit) {
+        val d = android.app.AlertDialog.Builder(this)
+            .setTitle("Sheer stopped last time")
+            .setMessage(report)
+            .setNeutralButton("Copy", null)
+            .setPositiveButton("Continue") { _, _ -> then() }
+            .setCancelable(false)
+            .create()
+        d.show()
+        // Copy must not close the dialog, so it is wired after show().
+        d.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("Sheer crash report", report))
+        }
+    }
+
+    private fun start(b: Bundle?) {
         // The theme is one shared object, so every Activity applies the saved choice itself before drawing anything.
         Aura.apply(Settings.theme(this), (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
         val bars = if (Aura.isDark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)

@@ -3,6 +3,7 @@ package com.killswitch.sheer.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +54,8 @@ import com.killswitch.sheer.UrlInput
 import com.killswitch.sheer.glass.LiquidButton
 import com.killswitch.sheer.glass.LiquidField
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import org.mozilla.geckoview.GeckoView
 
 /**
@@ -61,13 +64,15 @@ import org.mozilla.geckoview.GeckoView
  * live page is the first thing to check on the phone, see TESTING.md.
  */
 @Composable
-fun BrowseTab(browser: Browser, backdrop: Backdrop, active: Boolean) {
+fun BrowseTab(browser: Browser, active: Boolean) {
     val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
     val focus = remember { FocusRequester() }
     val tab = browser.current
     var editing by remember { mutableStateOf(false) }
     var field by remember { mutableStateOf(TextFieldValue("")) }
+    // What the glass bars refract: the scene and the page together. The bars are drawn OUTSIDE this layer, never inside it.
+    val backdrop = rememberLayerBackdrop()
 
     // The page keeps clear of the two glass bars: tab bar (88 dp), a gap, the address row (48 dp), a gap.
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -93,13 +98,16 @@ fun BrowseTab(browser: Browser, backdrop: Backdrop, active: Boolean) {
     )
 
     Box(Modifier.fillMaxSize()) {
-        if (tab != null) {
-            when {
-                tab.crashed -> Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
-                    EmptyState(Ic.Alert, "This page crashed", "The engine stopped on this tab. Your other tabs are fine.", "Reload") { browser.recover(tab) }
+        Box(Modifier.fillMaxSize().layerBackdrop(backdrop)) {
+            Canvas(Modifier.fillMaxSize()) { drawAuraScene() }
+            if (tab != null) {
+                when {
+                    tab.crashed -> Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
+                        EmptyState(Ic.Alert, "This page crashed", "The engine stopped on this tab. Your other tabs are fine.", "Reload") { browser.recover(tab) }
+                    }
+                    tab.session == null -> StartPage(::startEdit)
+                    else -> GeckoPage(browser, tab, reservePx)
                 }
-                tab.session == null -> StartPage(::startEdit)
-                else -> GeckoPage(browser, tab, reservePx)
             }
         }
 

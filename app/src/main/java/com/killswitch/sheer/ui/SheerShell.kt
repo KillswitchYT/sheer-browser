@@ -135,7 +135,7 @@ fun SheerShell(browser: Browser, jump: Int) {
     val page: @Composable (Int, Boolean) -> Unit = { i, active ->
         val seen = seenFor[i]
         when (i) {
-            0 -> BrowseTab(browser, backdrop, active)
+            0 -> BrowseTab(browser, active)
             1 -> TabsTab(browser, pad, seen, onOpen = { switchTo(0) })
             else -> SettingsTab(pad, seen, onNotice = { t, m -> dialog = t to m })
         }

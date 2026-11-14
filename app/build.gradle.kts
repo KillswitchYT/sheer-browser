@@ -7,6 +7,9 @@ plugins {
 // for a local build. After the first green build the exact version is pinned in gradle.properties.
 val geckoVersion = (findProperty("geckoVersion") as String?) ?: "160.0.+"
 
+// The real app is arm64 only. CI also builds the same code for an x86_64 emulator (-PtestAbi=x86_64) to smoke-test it.
+val abi = (findProperty("testAbi") as String?) ?: "arm64-v8a"
+
 // Release signing comes from the environment (CI stores the key as a secret). Without it the APK stays unsigned, so nothing signed with a
 // public key can ever ship by accident.
 val ksPath: String? = System.getenv("SHEER_KEYSTORE")
@@ -26,7 +29,7 @@ android {
         versionName = "0.1." + (run ?: "dev")
         manifestPlaceholders["appLabel"] = "Sheer"
         // The Galaxy A52 is 64-bit ARM. One engine build keeps the APK smaller.
-        ndk { abiFilters += "arm64-v8a" }
+        ndk { abiFilters += abi }
     }
 
     compileOptions {
@@ -68,7 +71,7 @@ android {
 }
 
 dependencies {
-    implementation("org.mozilla.geckoview:geckoview-arm64-v8a:$geckoVersion")
+    implementation("org.mozilla.geckoview:geckoview-$abi:$geckoVersion")
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("org.jetbrains.compose.foundation:foundation:1.12.0")

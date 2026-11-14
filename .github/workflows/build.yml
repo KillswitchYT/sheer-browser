@@ -112,3 +112,84 @@ jobs:
           git add .
           git commit -qm "logs for run $GITHUB_RUN_ID"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" build-logs
+
+  # The same code built for an x86_64 emulator, opened and fed a web link. Not a phone, but a crash here is real and comes with the phone's own log.
+  smoke:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    continue-on-error: true
+    env:
+      SHEER_KEYSTORE_B64: ${{ secrets.SHEER_KEYSTORE_B64 }}
+      SHEER_KEYSTORE_PASSWORD: ${{ secrets.SHEER_KEYSTORE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Load the signing key
+        run: |
+          echo "$SHEER_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/sheer.keystore"
+          echo "SHEER_KEYSTORE=$RUNNER_TEMP/sheer.keystore" >> "$GITHUB_ENV"
+
+      - name: Find the newest GeckoView
+        id: gv
+        run: |
+          v=$(bash tools/ci/gecko-version.sh || true)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Build the optimized app for the emulator (x86_64)
+        run: |
+          chmod +x gradlew
+          args=""
+          if [ -n "${{ steps.gv.outputs.version }}" ]; then args="-PgeckoVersion=${{ steps.gv.outputs.version }}"; fi
+          ./gradlew assembleRelease --no-daemon -PtestAbi=x86_64 $args 2>&1 | tail -40
+
+      # Lets the emulator use the machine's hardware acceleration.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke test on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disable-animations: true
+          script: timeout 900 bash tools/ci/smoke-test.sh app/build/outputs/apk/release/app-release.apk com.killswitch.sheer
+
+      - name: Show the result on the run page
+        if: always()
+        run: |
+          {
+            echo "### Smoke test"
+            echo '```'
+            cat smoke-result.txt 2>/dev/null || echo "the smoke test did not run"
+            echo '```'
+            echo '```'
+            head -60 smoke-crash.txt 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish the smoke test to branch build-logs
+        if: always()
+        run: |
+          mkdir -p /tmp/st && cd /tmp/st
+          URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git clone -q --depth 1 --branch build-logs "$URL" . || git init -q -b build-logs
+          for f in smoke-result.txt smoke-test.log smoke-crash.txt smoke-logcat.txt smoke-1.png smoke-2.png; do
+            cp "$GITHUB_WORKSPACE/$f" "$f" 2>/dev/null || rm -f "$f"
+          done
+          [ -f smoke-result.txt ] || echo "no result: the smoke test did not run" > smoke-result.txt
+          echo "run $GITHUB_RUN_ID, commit $GITHUB_SHA" > smoke-run.txt
+          git config user.name ci; git config user.email ci@users.noreply.github.com
+          git add -A; git commit -qm "smoke test for run $GITHUB_RUN_ID" || true
+          git push "$URL" HEAD:build-logs

@@ -47,8 +47,8 @@ object History {
             runCatching {
                 val d = db(c)
                 val now = System.currentTimeMillis()
-                d.execSQL("INSERT OR IGNORE INTO visits(url, title, last, count) VALUES(?, ?, ?, 0)", arrayOf(url, title, now))
-                d.execSQL("UPDATE visits SET last = ?, count = count + 1 WHERE url = ?", arrayOf(now, url))
+                d.execSQL("INSERT OR IGNORE INTO visits(url, title, last, count) VALUES(?, ?, ?, 0)", arrayOf<Any>(url, title, now))
+                d.execSQL("UPDATE visits SET last = ?, count = count + 1 WHERE url = ?", arrayOf<Any>(now, url))
                 changed()
             }
         }

@@ -54,14 +54,16 @@ view "https://example.com"
 step "LINK" 25 || { shot 2; exit 1; }
 shot 2
 
-log "a very long page: top, then scroll to the end"
-view "https://en.wikipedia.org/wiki/Firefox"
-step "LONGPAGE" 30 || { shot 3; exit 1; }
-shot 3
-for i in $(seq 1 45); do adbx input swipe 540 1750 540 450 40 > /dev/null; sleep 0.3; done
-sleep 4
-step "SCROLL" 5 || { shot 4; exit 1; }
-shot 4
+if [ "$MODE" != "quick" ]; then
+  log "a very long page: top, then scroll to the end"
+  view "https://en.wikipedia.org/wiki/Firefox"
+  step "LONGPAGE" 30 || { shot 3; exit 1; }
+  shot 3
+  for i in $(seq 1 45); do adbx input swipe 540 1750 540 450 40 > /dev/null; sleep 0.3; done
+  sleep 4
+  step "SCROLL" 5 || { shot 4; exit 1; }
+  shot 4
+fi
 
 if [ "$MODE" = "full" ]; then
   log "kill the page process, the way Android does when memory runs low"

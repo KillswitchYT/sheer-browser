@@ -2,6 +2,12 @@ name: Build APK
 
 on:
   workflow_dispatch:
+    inputs:
+      gecko:
+        description: "Engine: pinned keeps updates small, latest takes the newest Firefox engine (a big update)"
+        default: pinned
+        type: choice
+        options: [pinned, latest]
   push:
     branches: [main]
 
@@ -51,12 +57,15 @@ jobs:
           echo "$SHEER_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/sheer.keystore"
           echo "SHEER_KEYSTORE=$RUNNER_TEMP/sheer.keystore" >> "$GITHUB_ENV"
 
-      # The newest stable GeckoView on Mozilla maven, so the engine is current. If the lookup fails, gradle.properties decides.
-      - name: Find the newest GeckoView
+      # The engine version is pinned in gradle.properties so that ordinary updates are small. Only a manual run with gecko=latest looks up
+      # and uses the newest one.
+      - name: Pick the GeckoView version
         id: gv
         run: |
-          v=$(bash tools/ci/gecko-version.sh || true)
-          echo "newest stable GeckoView on Mozilla maven: ${v:-none found}" | tee gecko.txt
+          v=""
+          if [ "${{ github.event.inputs.gecko }}" = "latest" ]; then v=$(bash tools/ci/gecko-version.sh || true); fi
+          pinned=$(grep '^geckoVersion=' gradle.properties | cut -d= -f2)
+          echo "GeckoView ${v:-$pinned} ($([ -n "$v" ] && echo newest || echo pinned))" | tee gecko.txt
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
       - name: Build the app (optimized)
@@ -67,18 +76,33 @@ jobs:
           if [ -n "${{ steps.gv.outputs.version }}" ]; then args="-PgeckoVersion=${{ steps.gv.outputs.version }}"; fi
           ./gradlew assembleRelease --no-daemon --stacktrace $args 2>&1 | tee build.log
 
-      - name: Publish the APK as a release
+      - name: Make the update patches and publish the release
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
+          REPO="${{ github.repository }}"
+          CODE=$((100 + GITHUB_RUN_NUMBER)); NAME="0.1.${GITHUB_RUN_NUMBER}"
           cp app/build/outputs/apk/release/app-release.apk Sheer.apk
-          files="Sheer.apk"
+          sudo apt-get install -y -qq bsdiff > /dev/null
+          mkdir -p prev out
+          gh release download archive --repo "$REPO" --pattern 'Sheer-*.apk' --dir prev || echo "no earlier builds are kept yet"
+          python3 tools/ci/release-assets.py --apk Sheer.apk --code "$CODE" --name "$NAME" --prev prev --out out | tee patches.txt
+          files="Sheer.apk out/update.json $(ls out/patch-*.bin 2>/dev/null | tr '\n' ' ')"
           m=app/build/outputs/mapping/release/mapping.txt
           if [ -f "$m" ]; then cp "$m" mapping.txt; files="$files mapping.txt"; fi
-          gh release delete latest --cleanup-tag -y --repo "${{ github.repository }}" 2>/dev/null || true
-          gh release create latest $files --repo "${{ github.repository }}" --target "$GITHUB_SHA" --prerelease \
+          gh release delete latest --cleanup-tag -y --repo "$REPO" 2>/dev/null || true
+          gh release create latest $files --repo "$REPO" --target "$GITHUB_SHA" --prerelease \
             --title "Latest build" --notes "Built from commit ${GITHUB_SHA::7}. $(cat gecko.txt). Optimized and signed with the project key, so it updates over the previous build."
+          # Keep this build, and the two before it, only to make the next patches.
+          cp Sheer.apk "Sheer-$CODE.apk"
+          gh release view archive --repo "$REPO" > /dev/null 2>&1 || gh release create archive --repo "$REPO" --prerelease --latest=false \
+            --title "Kept builds" --notes "Earlier builds, kept only to make update patches. Not for installing."
+          gh release upload archive "Sheer-$CODE.apk" --repo "$REPO" --clobber
+          gh release view archive --repo "$REPO" --json assets --jq '.assets[].name' | sort -t- -k2 -n -r | tail -n +4 | while read -r n; do
+            gh release delete-asset archive "$n" --repo "$REPO" -y
+          done
 
       - name: Show errors on the run page
         if: always()
@@ -135,19 +159,11 @@ jobs:
           echo "$SHEER_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/sheer.keystore"
           echo "SHEER_KEYSTORE=$RUNNER_TEMP/sheer.keystore" >> "$GITHUB_ENV"
 
-      - name: Find the newest GeckoView
-        id: gv
-        run: |
-          v=$(bash tools/ci/gecko-version.sh || true)
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-
       # Two emulator builds of the same code: the normal layout, and one that starts with the address bar at the top.
       - name: Build the optimized app for the emulator (x86_64), both layouts
         run: |
           chmod +x gradlew
-          args=""
-          if [ -n "${{ steps.gv.outputs.version }}" ]; then args="-PgeckoVersion=${{ steps.gv.outputs.version }}"; fi
-          ./gradlew assembleRelease --no-daemon -PtestAbi=x86_64 $args 2>&1 | tail -15
+          ./gradlew assembleRelease --no-daemon -PtestAbi=x86_64 2>&1 | tail -15
           cp app/build/outputs/apk/release/app-release.apk smoke-bottom.apk
           # The top layout passed on the emulator already; to check it again, also build with -PtestTop=true into smoke-top.apk.
           ls -l smoke-bottom.apk

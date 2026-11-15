@@ -1,6 +1,10 @@
 package com.killswitch.sheer.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -29,6 +33,7 @@ import com.killswitch.sheer.CrashLog
 import com.killswitch.sheer.Gecko
 import com.killswitch.sheer.Settings
 import com.killswitch.sheer.UrlInput
+import com.killswitch.sheer.Updater
 import com.killswitch.sheer.glass.LiquidPanel
 import com.killswitch.sheer.glass.LiquidToggle
 
@@ -108,6 +113,61 @@ private fun LinkRow(icon: Ic, title: String, first: Boolean, onClick: () -> Unit
     }
 }
 
+/** A quiet line of status text inside a block. */
+@Composable
+private fun StatusRow(text: String, first: Boolean) {
+    Column(Modifier.fillMaxWidth().then(if (first) Modifier else Modifier.topHairline()).padding(vertical = 14.dp)) {
+        BasicText(text, style = ts(15f, Aura.Muted))
+    }
+}
+
+/** What an update is doing right now, with a thin bar. */
+@Composable
+private fun ProgressRow(label: String, progress: Float, first: Boolean) {
+    Column(
+        Modifier.fillMaxWidth().then(if (first) Modifier else Modifier.topHairline()).padding(vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        BasicText(label, style = ts(15f, weight = FontWeight.Bold))
+        Box(Modifier.fillMaxWidth().height(4.dp).background(Aura.overlay(.14f), RoundedCornerShape(2.dp))) {
+            Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(4.dp).background(Aura.Accent, RoundedCornerShape(2.dp)))
+        }
+    }
+}
+
+/** The rows of the Updates block, one set for each thing the updater can be doing. */
+@Composable
+private fun UpdateRows() {
+    val ctx = LocalContext.current
+    when (val s = Updater.state) {
+        is Updater.State.Idle -> LinkRow(Ic.Reload, "Check for updates", true) { Updater.check(ctx) }
+        is Updater.State.Checking -> StatusRow("Checking GitHub...", true)
+        is Updater.State.UpToDate -> {
+            StatusRow("You have the newest version (${s.version}).", true)
+            LinkRow(Ic.Reload, "Check again", false) { Updater.check(ctx) }
+        }
+        is Updater.State.Available -> {
+            ValueRow("Newest build", s.manifest.name, true)
+            if (s.patch != null) {
+                LinkRow(Ic.Check, "Update now, only ${Updater.mb(s.patch.size)}", false) { Updater.update(ctx, s, false) }
+            } else {
+                StatusRow("There is no small update for your version.", false)
+                LinkRow(Ic.Alert, "Download the whole app, ${Updater.mb(s.manifest.apkSize)}", false) { Updater.update(ctx, s, true) }
+            }
+        }
+        is Updater.State.Working -> ProgressRow(s.label, s.progress, true)
+        is Updater.State.NeedPermission -> {
+            StatusRow("Allow Sheer to install updates in the screen that opened, come back, then check again.", true)
+            LinkRow(Ic.Reload, "Check for updates", false) { Updater.check(ctx) }
+        }
+        is Updater.State.Confirming -> StatusRow("Confirm the update in Android's own prompt.", true)
+        is Updater.State.Failed -> {
+            StatusRow(s.message, true)
+            LinkRow(Ic.Reload, "Try again", false) { Updater.check(ctx) }
+        }
+    }
+}
+
 @Composable
 fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, String) -> Unit) {
     val ctx = LocalContext.current
@@ -164,7 +224,11 @@ fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, St
         }
 
         item {
-            Section(4, seen, "About", "Sheer is the Firefox engine in a new coat.") {
+            Section(4, seen, "Updates", "Only when you tap. GitHub can see your IP address while it checks.") { UpdateRows() }
+        }
+
+        item {
+            Section(5, seen, "About", "Sheer is the Firefox engine in a new coat.") {
                 ValueRow("Version", version, true)
                 ValueRow("Engine", "Gecko", false)
                 LinkRow(Ic.Alert, "Recent stops", false) { onNotice("Recent stops", CrashLog.recent(ctx)) }

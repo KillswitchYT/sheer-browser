@@ -6,7 +6,9 @@ import java.net.URLEncoder
 object UrlInput {
     class Engine(val name: String, val template: String)
 
+    /** The first one is the default. */
     val ENGINES = listOf(
+        Engine("Google", "https://www.google.com/search?q=%s"),
         Engine("DuckDuckGo", "https://duckduckgo.com/?q=%s"),
         Engine("Brave Search", "https://search.brave.com/search?q=%s"),
         Engine("Startpage", "https://www.startpage.com/do/search?q=%s"),

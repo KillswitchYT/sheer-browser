@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,7 +59,7 @@ fun NoticeDialog(backdrop: Backdrop, title: String, message: String, onClose: ()
         ) {
             BasicText(title, style = ts(20f, weight = FontWeight.ExtraBold))
             Spacer(Modifier.size(8.dp))
-            BasicText(message, style = ts(15f, Aura.Muted))
+            Box(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) { BasicText(message, style = ts(15f, Aura.Muted)) }
             Spacer(Modifier.size(20.dp))
             BigButton("OK", { leave() }, Modifier.fillMaxWidth(), accent = true)
         }

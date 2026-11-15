@@ -117,7 +117,7 @@ jobs:
   smoke:
     needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 70
     continue-on-error: true
     env:
       SHEER_KEYSTORE_B64: ${{ secrets.SHEER_KEYSTORE_B64 }}
@@ -141,12 +141,17 @@ jobs:
           v=$(bash tools/ci/gecko-version.sh || true)
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
-      - name: Build the optimized app for the emulator (x86_64)
+      # Two emulator builds of the same code: the normal layout, and one that starts with the address bar at the top.
+      - name: Build the optimized app for the emulator (x86_64), both layouts
         run: |
           chmod +x gradlew
           args=""
           if [ -n "${{ steps.gv.outputs.version }}" ]; then args="-PgeckoVersion=${{ steps.gv.outputs.version }}"; fi
-          ./gradlew assembleRelease --no-daemon -PtestAbi=x86_64 $args 2>&1 | tail -40
+          ./gradlew assembleRelease --no-daemon -PtestAbi=x86_64 $args 2>&1 | tail -15
+          cp app/build/outputs/apk/release/app-release.apk smoke-bottom.apk
+          ./gradlew assembleRelease --no-daemon -PtestAbi=x86_64 -PtestTop=true $args 2>&1 | tail -15
+          cp app/build/outputs/apk/release/app-release.apk smoke-top.apk
+          ls -l smoke-bottom.apk smoke-top.apk
 
       # Lets the emulator use the machine's hardware acceleration.
       - name: Enable KVM
@@ -164,7 +169,7 @@ jobs:
           profile: pixel_6
           ram-size: 4096M
           disable-animations: true
-          script: timeout 900 bash tools/ci/smoke-test.sh app/build/outputs/apk/release/app-release.apk com.killswitch.sheer
+          script: timeout 1500 bash tools/ci/smoke-all.sh
 
       - name: Show the result on the run page
         if: always()
@@ -172,10 +177,10 @@ jobs:
           {
             echo "### Smoke test"
             echo '```'
-            cat smoke-result.txt 2>/dev/null || echo "the smoke test did not run"
+            cat smoke-result-*.txt 2>/dev/null || echo "the smoke test did not run"
             echo '```'
             echo '```'
-            head -60 smoke-crash.txt 2>/dev/null || true
+            head -60 smoke-crash-*.txt 2>/dev/null || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -185,10 +190,10 @@ jobs:
           mkdir -p /tmp/st && cd /tmp/st
           URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           git clone -q --depth 1 --branch build-logs "$URL" . || git init -q -b build-logs
-          for f in smoke-result.txt smoke-test.log smoke-crash.txt smoke-logcat.txt smoke-1.png smoke-2.png; do
-            cp "$GITHUB_WORKSPACE/$f" "$f" 2>/dev/null || rm -f "$f"
-          done
-          [ -f smoke-result.txt ] || echo "no result: the smoke test did not run" > smoke-result.txt
+          rm -f smoke-*.png smoke-*.txt smoke-*.log
+          cp "$GITHUB_WORKSPACE"/smoke-*.png "$GITHUB_WORKSPACE"/smoke-result-*.txt "$GITHUB_WORKSPACE"/smoke-crash-*.txt \
+             "$GITHUB_WORKSPACE"/smoke-test-*.log "$GITHUB_WORKSPACE"/smoke-logcat-*.txt . 2>/dev/null || true
+          ls smoke-result-*.txt > /dev/null 2>&1 || echo "no result: the smoke test did not run" > smoke-result-none.txt
           echo "run $GITHUB_RUN_ID, commit $GITHUB_SHA" > smoke-run.txt
           git config user.name ci; git config user.email ci@users.noreply.github.com
           git add -A; git commit -qm "smoke test for run $GITHUB_RUN_ID" || true

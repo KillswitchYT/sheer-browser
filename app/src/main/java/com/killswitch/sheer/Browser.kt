@@ -1,6 +1,9 @@
 package com.killswitch.sheer
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -26,6 +29,9 @@ class BTab(val id: Int, url: String, title: String) {
     var secure by mutableStateOf(false)
     var crashed by mutableStateOf(false)
     var session by mutableStateOf<GeckoSession?>(null)
+
+    /** When the page process last stopped under this tab, to tell a one-off from a loop. */
+    var lastStop = 0L
 }
 
 /** All open tabs and the one being shown. Lives as long as the process, so the pages survive the screen being rebuilt. */
@@ -39,7 +45,12 @@ class Browser(private val app: Context) {
 
     val current: BTab? get() = tabs.firstOrNull { it.id == selectedId }
 
-    init { restore() }
+    private val main = Handler(Looper.getMainLooper())
+
+    init {
+        restore()
+        current?.let { if (it.url.isNotEmpty()) ensure(it) } // the tab that was open last time shows its page straight away
+    }
 
     private fun restore() {
         try {
@@ -79,7 +90,17 @@ class Browser(private val app: Context) {
         return t
     }
 
-    fun select(id: Int) { if (tabs.any { it.id == id }) selectedId = id }
+    fun select(id: Int) {
+        if (tabs.none { it.id == id }) return
+        selectedId = id
+        showCurrent()
+    }
+
+    /** A tab that was restored (or whose page process stopped while it was in the background) gets its page when it is shown. */
+    private fun showCurrent() {
+        val t = current ?: return
+        if (t.session == null && t.url.isNotEmpty() && !t.crashed) ensure(t)
+    }
 
     fun close(id: Int) {
         val i = tabs.indexOfFirst { it.id == id }
@@ -92,6 +113,7 @@ class Browser(private val app: Context) {
             selectedId = n.id
         } else if (t.id == selectedId) {
             selectedId = tabs[i.coerceAtMost(tabs.size - 1)].id
+            showCurrent()
         }
     }
 
@@ -147,6 +169,25 @@ class Browser(private val app: Context) {
         if (t.url.isNotEmpty()) ensure(t)
     }
 
+    /**
+     * The process that draws a page died (a crash, or Android reclaiming memory). The first time, the page is quietly loaded again;
+     * a second stop within 30 seconds shows the "page crashed" screen instead, so it can never loop. Every stop is written to the log
+     * that Settings, About, Recent stops shows.
+     */
+    private fun stopped(t: BTab, how: String) {
+        t.loading = false
+        t.progress = 0
+        CrashLog.event(app, "page process $how on ${UrlInput.host(t.url).ifEmpty { "a blank tab" }}")
+        val now = SystemClock.elapsedRealtime()
+        val repeat = t.lastStop != 0L && now - t.lastStop < 30_000
+        t.lastStop = now
+        main.post { // not inside the engine's own callback
+            dispose(t)
+            if (t.id != selectedId) return@post // a background tab loads again when it is shown
+            if (repeat) t.crashed = true else if (t.url.isNotEmpty()) ensure(t)
+        }
+    }
+
     private fun attach(t: BTab, s: GeckoSession) {
         s.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onLocationChange(
@@ -182,8 +223,8 @@ class Browser(private val app: Context) {
         }
         s.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onTitleChange(session: GeckoSession, title: String?) { t.title = title.orEmpty() }
-            override fun onCrash(session: GeckoSession) { t.crashed = true; t.loading = false }
-            override fun onKill(session: GeckoSession) { t.crashed = true; t.loading = false }
+            override fun onCrash(session: GeckoSession) { stopped(t, "crashed") }
+            override fun onKill(session: GeckoSession) { stopped(t, "was killed") }
         }
     }
 }

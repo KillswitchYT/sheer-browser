@@ -28,6 +28,8 @@ android {
         versionCode = 100 + (run ?: 0)
         versionName = "0.1." + (run ?: "dev")
         manifestPlaceholders["appLabel"] = "Sheer"
+        // Only CI's second emulator run changes this (-PtestTop=true), to check the layout with the address bar at the top.
+        resValue("bool", "default_address_top", (findProperty("testTop") as String?) ?: "false")
         // The Galaxy A52 is 64-bit ARM. One engine build keeps the APK smaller.
         ndk { abiFilters += abi }
     }

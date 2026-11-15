@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.toArgb
 import com.killswitch.sheer.ui.Aura
 import com.killswitch.sheer.ui.SheerShell
+import com.killswitch.sheer.ui.UiPrefs
 
 class MainActivity : ComponentActivity() {
     private val jump = mutableIntStateOf(0)
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun start(b: Bundle?) {
+        UiPrefs.addressTop = Settings.addressTop(this)
         // The theme is one shared object, so every Activity applies the saved choice itself before drawing anything.
         Aura.apply(Settings.theme(this), (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
         val bars = if (Aura.isDark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)

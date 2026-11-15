@@ -8,7 +8,8 @@ fun check(name: String, ok: Boolean) { total++; if (!ok) { bad++; println("FAIL 
 fun section(s: String) = println("== $s")
 
 fun main() {
-    val ddg = UrlInput.ENGINES[0]
+    val ddg = UrlInput.ENGINES.first { it.name == "DuckDuckGo" }
+    val google = UrlInput.ENGINES.first { it.name == "Google" }
 
     section("palettes: every text and background pair is readable")
     check("contrast scale is right", Math.abs(Palettes.contrast(0xFF000000.toInt(), 0xFFFFFFFF.toInt()) - 21.0) < 0.01 && Math.abs(Palettes.contrast(0xFF777777.toInt(), 0xFF777777.toInt()) - 1.0) < 0.001)
@@ -52,6 +53,9 @@ fun main() {
     check("javascript: is searched for, never run", UrlInput.resolve("javascript:alert(1)", ddg)!!.startsWith("https://duckduckgo.com/?q="))
     check("data: is searched for, never opened", UrlInput.resolve("data:text/html,hi", ddg)!!.startsWith("https://duckduckgo.com/?q="))
     check("file: is searched for, never opened", UrlInput.resolve("file:///etc/passwd", ddg)!!.startsWith("https://duckduckgo.com/?q="))
+    check("Google is the default engine", UrlInput.ENGINES[0].name == "Google")
+    check("a Google search is built right", UrlInput.resolve("best pizza", google) == "https://www.google.com/search?q=best+pizza")
+    check("every engine has a different name", UrlInput.ENGINES.map { it.name }.toSet().size == UrlInput.ENGINES.size)
     check("blank input loads nothing", UrlInput.resolve("   ", ddg) == null && UrlInput.resolve("", ddg) == null)
     check("every engine has exactly one place for the text", UrlInput.ENGINES.all { it.template.split("%s").size == 2 })
     check("every engine uses https", UrlInput.ENGINES.all { it.template.startsWith("https://") })

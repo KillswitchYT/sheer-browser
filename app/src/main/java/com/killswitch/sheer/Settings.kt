@@ -14,8 +14,9 @@ object Settings {
     /** 0 follows the phone, 1 dark, 2 light. */
     fun theme(c: Context) = int(c, "th", 0).coerceIn(0, 2)
 
-    /** Index into [UrlInput.ENGINES]. */
-    fun engine(c: Context) = int(c, "se", 0).coerceIn(0, UrlInput.ENGINES.lastIndex)
+    /** Index into [UrlInput.ENGINES]. The key is "se2" because the list changed: an older saved choice must not point at a different engine. */
+    fun engine(c: Context) = int(c, "se2", 0).coerceIn(0, UrlInput.ENGINES.lastIndex)
+    fun setEngine(c: Context, i: Int) = setInt(c, "se2", i)
 
     /** Pages that only offer plain http are refused. On until the person turns it off. */
     fun httpsOnly(c: Context) = int(c, "https", 1) == 1
@@ -25,6 +26,9 @@ object Settings {
 
     /** Google's list of dangerous sites, checked on the phone. On until the person turns it off. */
     fun safeBrowsing(c: Context) = int(c, "sb", 1) == 1
+
+    /** The address bar at the top instead of the bottom. Test builds can flip the default with -PtestTop=true. */
+    fun addressTop(c: Context) = int(c, "top", if (c.resources.getBoolean(R.bool.default_address_top)) 1 else 0) == 1
 
     fun flag(c: Context, k: String, on: Boolean) = setInt(c, k, if (on) 1 else 0)
 }

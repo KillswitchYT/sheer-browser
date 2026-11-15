@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.killswitch.sheer.CrashLog
 import com.killswitch.sheer.Gecko
 import com.killswitch.sheer.Settings
 import com.killswitch.sheer.UrlInput
@@ -116,13 +117,14 @@ fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, St
     var strict by remember { mutableStateOf(Settings.strictTracking(ctx)) }
     var https by remember { mutableStateOf(Settings.httpsOnly(ctx)) }
     var safe by remember { mutableStateOf(Settings.safeBrowsing(ctx)) }
+    var top by remember { mutableStateOf(UiPrefs.addressTop) }
     val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?" }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(18.dp)) {
         item { Column(Modifier.staggerIn(0, seen.add("set-head"))) { PageTitle("Settings", "Kept on this phone only") } }
 
         item {
-            Section(1, seen, "Appearance", "Light, dark, or whatever the phone does.") {
+            Section(1, seen, "Appearance", "Theme, and where the address bar sits.") {
                 THEMES.forEachIndexed { i, name ->
                     Choice(name, null, theme == i, i == 0) {
                         theme = i
@@ -131,13 +133,18 @@ fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, St
                         Gecko.applyColorScheme(ctx)
                     }
                 }
+                ToggleRow("Address bar at the top", "The tab bar stays at the bottom.", top, false) {
+                    top = it; Settings.flag(ctx, "top", it); UiPrefs.addressTop = it
+                }
             }
         }
 
         item {
             Section(2, seen, "Search", "What the address bar uses for anything that is not a web address.") {
                 UrlInput.ENGINES.forEachIndexed { i, e ->
-                    Choice(e.name, null, engine == i, i == 0) { engine = i; Settings.setInt(ctx, "se", i) }
+                    Choice(e.name, if (e.name == "Google") "Google can log what you search." else null, engine == i, i == 0) {
+                        engine = i; Settings.setEngine(ctx, i)
+                    }
                 }
             }
         }
@@ -160,6 +167,7 @@ fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, St
             Section(4, seen, "About", "Sheer is the Firefox engine in a new coat.") {
                 ValueRow("Version", version, true)
                 ValueRow("Engine", "Gecko", false)
+                LinkRow(Ic.Alert, "Recent stops", false) { onNotice("Recent stops", CrashLog.recent(ctx)) }
                 LinkRow(
                     Ic.Info, "What Sheer collects", false,
                 ) {

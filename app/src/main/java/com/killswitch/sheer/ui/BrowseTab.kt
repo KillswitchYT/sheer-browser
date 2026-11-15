@@ -38,7 +38,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -65,7 +64,6 @@ import org.mozilla.geckoview.GeckoView
  */
 @Composable
 fun BrowseTab(browser: Browser, active: Boolean) {
-    val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
     val focus = remember { FocusRequester() }
     val tab = browser.current
@@ -74,9 +72,13 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     // What the glass bars refract: the scene and the page together. The bars are drawn OUTSIDE this layer, never inside it.
     val backdrop = rememberLayerBackdrop()
 
-    // The page keeps clear of the two glass bars: tab bar (88 dp), a gap, the address row (48 dp), a gap.
+    // The page sits between the bars and never under them, so the end of a page is always readable. The tab bar is always at the bottom
+    // (88 dp with its padding); the address row (48 dp plus a gap each side) is at the bottom or the top, as chosen in Settings.
+    val top = UiPrefs.addressTop
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val reservePx = with(density) { (navBottom + 152.dp).roundToPx() }
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val pageTop = if (top) statusTop + 64.dp else statusTop
+    val pageBottom = if (top) navBottom + 88.dp else navBottom + 152.dp
 
     fun leaveEdit() { editing = false; focusManager.clearFocus() }
     fun startEdit() {
@@ -87,6 +89,9 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     fun submit() { browser.go(field.text); leaveEdit() }
 
     LaunchedEffect(browser.selectedId) { editing = false }
+    LaunchedEffect(tab?.id, tab?.session, tab?.crashed) {
+        if (tab != null && tab.session == null && tab.url.isNotEmpty() && !tab.crashed) browser.ensure(tab)
+    }
     LaunchedEffect(editing) { if (editing) focus.requestFocus() }
     LaunchedEffect(active) { if (!active) leaveEdit() }
     BackHandler(enabled = active && editing) { leaveEdit() }
@@ -106,7 +111,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                         EmptyState(Ic.Alert, "This page crashed", "The engine stopped on this tab. Your other tabs are fine.", "Reload") { browser.recover(tab) }
                     }
                     tab.session == null -> StartPage(::startEdit)
-                    else -> GeckoPage(browser, tab, reservePx)
+                    else -> GeckoPage(browser, tab, Modifier.fillMaxSize().padding(top = pageTop, bottom = pageBottom))
                 }
             }
         }
@@ -116,8 +121,9 @@ fun BrowseTab(browser: Browser, active: Boolean) {
         }
 
         Row(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().imePadding()
-                .padding(start = 16.dp, end = 16.dp, bottom = if (editing) 8.dp else 96.dp),
+            (if (top) Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp)
+            else Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().imePadding()
+                .padding(start = 16.dp, end = 16.dp, bottom = if (editing) 8.dp else 96.dp)),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -201,7 +207,7 @@ private fun StartPage(onSearch: () -> Unit) {
 
 /** The real page. Gecko draws into a view that Compose hosts; a new session is handed to it once the engine has opened it. */
 @Composable
-private fun GeckoPage(browser: Browser, tab: BTab, reservePx: Int) {
+private fun GeckoPage(browser: Browser, tab: BTab, modifier: Modifier) {
     val session = tab.session ?: return
     val tick = tab.url.length + tab.progress // read here so this runs again after a freshly opened session becomes ready
     val ink = Aura.Ink.toArgb()
@@ -213,11 +219,13 @@ private fun GeckoPage(browser: Browser, tab: BTab, reservePx: Int) {
                 browser.view = it
             }
         },
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier,
         update = { v ->
             v.tag = tick
-            v.setDynamicToolbarMaxHeight(reservePx)
-            if (session.isOpen) v.setSession(session)
+            if (session.isOpen && v.session !== session) {
+                if (v.session != null) v.releaseSession() // let go of the old page first, as the engine asks
+                v.setSession(session)
+            }
         },
         onRelease = { v ->
             if (browser.view === v) browser.view = null

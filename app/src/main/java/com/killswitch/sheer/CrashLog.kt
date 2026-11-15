@@ -58,6 +58,35 @@ object CrashLog {
         return out.take(70)
     }
 
+    private fun events(c: Context) = File(c.filesDir, "events.txt")
+
+    /** One line in the on-phone log of things that went wrong inside the app. Kept to the last 30 lines. */
+    fun event(c: Context, text: String) {
+        runCatching {
+            val f = events(c)
+            val old = if (f.exists()) f.readLines().takeLast(29) else emptyList()
+            f.writeText((old + "${stamp(System.currentTimeMillis())}  $text").joinToString("\n") + "\n")
+        }
+    }
+
+    /** For Settings, About, Recent stops: what the app logged, then how Android says each process ended. Newest first. */
+    fun recent(c: Context): String {
+        val sb = StringBuilder()
+        runCatching {
+            val f = events(c)
+            if (f.exists()) f.readLines().takeLast(8).reversed().forEach { sb.append(it).append('\n') }
+        }
+        if (Build.VERSION.SDK_INT >= 30) runCatching {
+            val am = c.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            for (e in am.getHistoricalProcessExitReasons(c.packageName, 0, 8)) {
+                val name = reasonName(e.reason) ?: "reason ${e.reason}"
+                val proc = e.processName.removePrefix(c.packageName).ifEmpty { "main" }
+                sb.append("${stamp(e.timestamp)}  Android: $proc, $name, ${e.description.orEmpty()}\n")
+            }
+        }
+        return if (sb.isEmpty()) "Nothing has stopped." else sb.toString().trimEnd()
+    }
+
     /** What went wrong since the last report, or null when nothing did. Marks it as shown. */
     fun pending(c: Context): String? {
         val parts = ArrayList<String>()

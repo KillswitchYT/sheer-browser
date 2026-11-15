@@ -69,7 +69,7 @@ if [ "$MODE" = "full" ]; then
   pids=$(adbx ps -A | grep -E "$PKG:" | awk '{print $2}')
   echo "child processes: $(adbx ps -A | grep -E "$PKG:" | awk '{print $2, $NF}' | tr '\n' ';')"
   killed=0
-  for p in $(adbx ps -A | grep -E "$PKG:tab" | awk '{print $2}'); do adbx kill -9 "$p" > /dev/null; killed=$((killed + 1)); done
+  for p in $(adbx ps -A | grep -E "$PKG:(sandboxed_)?tab" | awk '{print $2}'); do adbx kill -9 "$p" > /dev/null; killed=$((killed + 1)); done
   note "[$TAG] KILL: killed $killed page process(es)"
   if [ "$killed" -gt 0 ]; then
     sleep 3

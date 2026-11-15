@@ -74,7 +74,15 @@ class Browser(private val app: Context) {
         }
     }
 
-    /** Written when the app goes to the background. Only the address and title of each tab, kept on the phone. */
+    private val saveLater = Runnable { save() }
+
+    /** Saves a moment after the last change, so a crash or a kill never loses the open tabs. */
+    private fun scheduleSave() {
+        main.removeCallbacks(saveLater)
+        main.postDelayed(saveLater, 1500)
+    }
+
+    /** Written a moment after every change, and when the app goes to the background. Only the address and title of each tab. */
     fun save() {
         val a = JSONArray()
         tabs.forEach { a.put(JSONObject().put("u", it.url).put("n", it.title)) }
@@ -87,6 +95,7 @@ class Browser(private val app: Context) {
         tabs.add(t)
         selectedId = t.id
         if (url != null) ensure(t)
+        scheduleSave()
         return t
     }
 
@@ -94,6 +103,7 @@ class Browser(private val app: Context) {
         if (tabs.none { it.id == id }) return
         selectedId = id
         showCurrent()
+        scheduleSave()
     }
 
     /** A tab that was restored (or whose page process stopped while it was in the background) gets its page when it is shown. */
@@ -115,6 +125,7 @@ class Browser(private val app: Context) {
             selectedId = tabs[i.coerceAtMost(tabs.size - 1)].id
             showCurrent()
         }
+        scheduleSave()
     }
 
     private fun dispose(t: BTab) {
@@ -147,6 +158,7 @@ class Browser(private val app: Context) {
         t.title = ""
         val s = ensure(t)
         if (had) s.loadUri(url)
+        scheduleSave()
     }
 
     /** A link from another app. */
@@ -196,7 +208,7 @@ class Browser(private val app: Context) {
                 perms: MutableList<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean,
             ) {
-                if (url != null) t.url = url
+                if (url != null) { t.url = url; scheduleSave() }
             }
 
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) { t.canBack = canGoBack }
@@ -222,7 +234,7 @@ class Browser(private val app: Context) {
             }
         }
         s.contentDelegate = object : GeckoSession.ContentDelegate {
-            override fun onTitleChange(session: GeckoSession, title: String?) { t.title = title.orEmpty() }
+            override fun onTitleChange(session: GeckoSession, title: String?) { t.title = title.orEmpty(); scheduleSave() }
             override fun onCrash(session: GeckoSession) { stopped(t, "crashed") }
             override fun onKill(session: GeckoSession) { stopped(t, "was killed") }
         }

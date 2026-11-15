@@ -29,7 +29,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.killswitch.sheer.Browser
 import com.killswitch.sheer.CrashLog
+import com.killswitch.sheer.History
+import org.mozilla.geckoview.StorageController
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import com.killswitch.sheer.Gecko
 import com.killswitch.sheer.Settings
 import com.killswitch.sheer.UrlInput
@@ -113,6 +118,25 @@ private fun LinkRow(icon: Ic, title: String, first: Boolean, onClick: () -> Unit
     }
 }
 
+/** A row that does something you cannot undo: the first tap asks, the second does it. It forgets the question after four seconds. */
+@Composable
+private fun ClearRow(title: String, sub: String, first: Boolean, action: () -> Unit) {
+    var confirm by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf(false) }
+    LaunchedEffect(confirm) { if (confirm) { delay(4000); confirm = false } }
+    LaunchedEffect(done) { if (done) { delay(2500); done = false } }
+    Column(
+        Modifier.fillMaxWidth().then(if (first) Modifier else Modifier.topHairline())
+            .pressable { if (confirm) { action(); confirm = false; done = true } else confirm = true }.padding(vertical = 14.dp),
+    ) {
+        BasicText(
+            if (done) "Cleared" else if (confirm) "Tap again to confirm" else title,
+            style = ts(16f, if (confirm) Aura.Rose else if (done) Aura.Mint else Aura.Text, FontWeight.Bold),
+        )
+        BasicText(sub, style = ts(13f, Aura.Muted))
+    }
+}
+
 /** A quiet line of status text inside a block. */
 @Composable
 private fun StatusRow(text: String, first: Boolean) {
@@ -169,7 +193,7 @@ private fun UpdateRows() {
 }
 
 @Composable
-fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, String) -> Unit) {
+fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, String) -> Unit) {
     val ctx = LocalContext.current
     val sysDark = isSystemInDarkTheme()
     var theme by remember { mutableIntStateOf(Settings.theme(ctx)) }
@@ -178,6 +202,7 @@ fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, St
     var https by remember { mutableStateOf(Settings.httpsOnly(ctx)) }
     var safe by remember { mutableStateOf(Settings.safeBrowsing(ctx)) }
     var top by remember { mutableStateOf(UiPrefs.addressTop) }
+    var under by remember { mutableStateOf(UiPrefs.pageUnder) }
     val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?" }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -195,6 +220,9 @@ fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, St
                 }
                 ToggleRow("Address bar at the top", "The tab bar stays at the bottom.", top, false) {
                     top = it; Settings.flag(ctx, "top", it); UiPrefs.addressTop = it
+                }
+                ToggleRow("Page scrolls under the bars", "The glass blurs the page. The end of a page can hide behind the bars.", under, false) {
+                    under = it; Settings.flag(ctx, "under", it); UiPrefs.pageUnder = it
                 }
             }
         }
@@ -224,11 +252,30 @@ fun SettingsTab(pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, St
         }
 
         item {
-            Section(4, seen, "Updates", "Only when you tap. GitHub can see your IP address while it checks.") { UpdateRows() }
+            Section(4, seen, "Clear browsing data", "History is in the History tab. Cookies can be removed here but not listed.") {
+                val gc = { Gecko.runtime(ctx).storageController }
+                ClearRow("Clear history", "Every page in the History tab.", true) { History.clear(ctx) }
+                ClearRow("Clear cookies and site data", "Logs you out of sites and removes what they stored.", false) {
+                    gc().clearData(StorageController.ClearFlags.COOKIES or StorageController.ClearFlags.DOM_STORAGES or StorageController.ClearFlags.AUTH_SESSIONS)
+                }
+                ClearRow("Clear the cache", "Saved copies of pages and images. Pages load slower once.", false) {
+                    gc().clearData(StorageController.ClearFlags.ALL_CACHES)
+                }
+                val host = UrlInput.host(browser.current?.url.orEmpty()).takeIf { browser.current?.incognito != true && it.isNotEmpty() && !it.contains(':') }
+                if (host != null) {
+                    ClearRow("Clear data for $host", "Cookies and site data for the open page only.", false) {
+                        gc().clearDataFromHost(host, StorageController.ClearFlags.COOKIES or StorageController.ClearFlags.DOM_STORAGES or StorageController.ClearFlags.AUTH_SESSIONS)
+                    }
+                }
+            }
         }
 
         item {
-            Section(5, seen, "About", "Sheer is the Firefox engine in a new coat.") {
+            Section(5, seen, "Updates", "Only when you tap. GitHub can see your IP address while it checks.") { UpdateRows() }
+        }
+
+        item {
+            Section(6, seen, "About", "Sheer is the Firefox engine in a new coat.") {
                 ValueRow("Version", version, true)
                 ValueRow("Engine", "Gecko", false)
                 LinkRow(Ic.Alert, "Recent stops", false) { onNotice("Recent stops", CrashLog.recent(ctx)) }

@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
 
 private class TabInfo(val icon: Ic, val label: String)
 
-private val TABS = listOf(TabInfo(Ic.World, "Browse"), TabInfo(Ic.Tabs, "Tabs"), TabInfo(Ic.Setup, "Settings"))
+private val TABS = listOf(TabInfo(Ic.World, "Browse"), TabInfo(Ic.Tabs, "Tabs"), TabInfo(Ic.Clock, "History"), TabInfo(Ic.Setup, "Settings"))
 
 /**
  * The shell, built on the reference's: the scene the glass refracts, every tab built once and kept (a hidden tab is frozen and swallows
@@ -137,7 +137,8 @@ fun SheerShell(browser: Browser, jump: Int) {
         when (i) {
             0 -> BrowseTab(browser, active)
             1 -> TabsTab(browser, pad, seen, onOpen = { switchTo(0) })
-            else -> SettingsTab(pad, seen, onNotice = { t, m -> dialog = t to m })
+            2 -> HistoryTab(browser, pad, seen, onOpen = { switchTo(0) })
+            else -> SettingsTab(browser, pad, seen, onNotice = { t, m -> dialog = t to m })
         }
     }
 

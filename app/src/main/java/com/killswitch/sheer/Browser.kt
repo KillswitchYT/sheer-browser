@@ -13,13 +13,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
+import org.mozilla.geckoview.GeckoSessionSettings
 import org.mozilla.geckoview.GeckoView
 
 /**
  * One open page. The Gecko session is only made the first time the page is wanted, so a tab restored from the last run costs nothing
  * until it is opened. A tab with no session is the start page.
  */
-class BTab(val id: Int, url: String, title: String) {
+/** [incognito] tabs keep nothing: no history, no cookies, not even the list of open tabs on the next start. */
+class BTab(val id: Int, url: String, title: String, val incognito: Boolean = false) {
     var url by mutableStateOf(url)
     var title by mutableStateOf(title)
     var progress by mutableIntStateOf(0)
@@ -84,14 +86,15 @@ class Browser(private val app: Context) {
 
     /** Written a moment after every change, and when the app goes to the background. Only the address and title of each tab. */
     fun save() {
+        val keep = tabs.filter { !it.incognito } // private tabs are never written down
         val a = JSONArray()
-        tabs.forEach { a.put(JSONObject().put("u", it.url).put("n", it.title)) }
-        val s = tabs.indexOfFirst { it.id == selectedId }.coerceAtLeast(0)
+        keep.forEach { a.put(JSONObject().put("u", it.url).put("n", it.title)) }
+        val s = keep.indexOfFirst { it.id == selectedId }.coerceAtLeast(0)
         Settings.setStr(app, "tabs", JSONObject().put("t", a).put("s", s).toString())
     }
 
-    fun newTab(url: String? = null): BTab {
-        val t = BTab(nextId++, url.orEmpty(), "")
+    fun newTab(url: String? = null, incognito: Boolean = false): BTab {
+        val t = BTab(nextId++, url.orEmpty(), "", incognito)
         tabs.add(t)
         selectedId = t.id
         if (url != null) ensure(t)
@@ -134,6 +137,7 @@ class Browser(private val app: Context) {
         s.navigationDelegate = null
         s.progressDelegate = null
         s.contentDelegate = null
+        s.historyDelegate = null
         s.close()
         t.session = null
     }
@@ -141,13 +145,19 @@ class Browser(private val app: Context) {
     /** Make the page behind this tab, the first time it is needed. */
     fun ensure(t: BTab): GeckoSession {
         t.session?.let { return it }
-        val s = GeckoSession()
+        val s = makeSession(t.incognito)
         attach(t, s)
         s.open(Gecko.runtime(app))
         t.session = s
         if (t.url.isNotEmpty()) s.loadUri(t.url)
         return s
     }
+
+    /** A private session keeps its cookies and cache in memory only, and the engine forgets them when the last private page closes. */
+    private fun makeSession(incognito: Boolean): GeckoSession =
+        if (incognito) GeckoSession(GeckoSessionSettings.Builder().usePrivateMode(true).build()) else GeckoSession()
+
+    fun closePrivate() { tabs.filter { it.incognito }.map { it.id }.forEach { close(it) } }
 
     /** Address bar: what was typed, turned into a page or a search. */
     fun go(input: String) {
@@ -189,7 +199,7 @@ class Browser(private val app: Context) {
     private fun stopped(t: BTab, how: String) {
         t.loading = false
         t.progress = 0
-        CrashLog.event(app, "page process $how on ${UrlInput.host(t.url).ifEmpty { "a blank tab" }}")
+        CrashLog.event(app, "page process $how on ${if (t.incognito) "a private tab" else UrlInput.host(t.url).ifEmpty { "a blank tab" }}")
         val now = SystemClock.elapsedRealtime()
         val repeat = t.lastStop != 0L && now - t.lastStop < 30_000
         t.lastStop = now
@@ -201,6 +211,25 @@ class Browser(private val app: Context) {
     }
 
     private fun attach(t: BTab, s: GeckoSession) {
+        // History is only recorded for normal tabs. A private tab gets no delegate at all, so there is nothing to record and links never
+        // show as visited.
+        if (!t.incognito) {
+            s.historyDelegate = object : GeckoSession.HistoryDelegate {
+                override fun onVisited(session: GeckoSession, url: String, lastVisitedURL: String?, flags: Int): GeckoResult<Boolean>? {
+                    val top = flags and GeckoSession.HistoryDelegate.VISIT_TOP_LEVEL != 0
+                    val hop = flags and (GeckoSession.HistoryDelegate.VISIT_REDIRECT_SOURCE or GeckoSession.HistoryDelegate.VISIT_REDIRECT_SOURCE_PERMANENT) != 0
+                    val failed = flags and GeckoSession.HistoryDelegate.VISIT_UNRECOVERABLE_ERROR != 0
+                    if (top && !hop && !failed && UrlInput.isWeb(url)) History.record(app, url, "")
+                    return GeckoResult.fromValue(true)
+                }
+
+                override fun getVisited(session: GeckoSession, urls: Array<String>): GeckoResult<BooleanArray>? {
+                    val r = GeckoResult<BooleanArray>()
+                    History.visited(app, urls) { r.complete(it) }
+                    return r
+                }
+            }
+        }
         s.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onLocationChange(
                 session: GeckoSession,
@@ -216,8 +245,8 @@ class Browser(private val app: Context) {
 
             // A link that opens a new window (target=_blank, window.open): it becomes a new tab. Gecko opens the session we hand back.
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
-                val nt = BTab(nextId++, uri, "")
-                val ns = GeckoSession()
+                val nt = BTab(nextId++, uri, "", t.incognito)
+                val ns = makeSession(t.incognito)
                 attach(nt, ns)
                 nt.session = ns
                 tabs.add(nt)
@@ -234,7 +263,10 @@ class Browser(private val app: Context) {
             }
         }
         s.contentDelegate = object : GeckoSession.ContentDelegate {
-            override fun onTitleChange(session: GeckoSession, title: String?) { t.title = title.orEmpty(); scheduleSave() }
+            override fun onTitleChange(session: GeckoSession, title: String?) {
+                t.title = title.orEmpty()
+                if (!t.incognito) { History.setTitle(app, t.url, t.title); scheduleSave() }
+            }
             override fun onCrash(session: GeckoSession) { stopped(t, "crashed") }
             override fun onKill(session: GeckoSession) { stopped(t, "was killed") }
         }

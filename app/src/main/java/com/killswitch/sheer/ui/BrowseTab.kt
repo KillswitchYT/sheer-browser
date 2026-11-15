@@ -1,5 +1,7 @@
 package com.killswitch.sheer.ui
 
+import android.app.Activity
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -27,6 +29,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +42,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -73,13 +77,15 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     // What the glass bars refract: the scene and the page together. The bars are drawn OUTSIDE this layer, never inside it.
     val backdrop = rememberLayerBackdrop()
 
-    // The page sits between the bars and never under them, so the end of a page is always readable. The tab bar is always at the bottom
-    // (88 dp with its padding); the address row (48 dp plus a gap each side) is at the bottom or the top, as chosen in Settings.
+    // The tab bar is always at the bottom (88 dp with its padding); the address row (48 dp plus a gap each side) is at the bottom or the
+    // top, as chosen in Settings. The page never starts under the top bars. At the bottom it either runs under the glass (the default look,
+    // the glass blurs the page, the end of a page can hide behind the bars) or stops above the bars (Settings, "Page scrolls under the bars").
     val top = UiPrefs.addressTop
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val pageTop = if (top) statusTop + 64.dp else statusTop
-    val pageBottom = if (top) navBottom + 88.dp else navBottom + 152.dp
+    val under = UiPrefs.pageUnder
+    val pageBottom = if (under) 0.dp else if (top) navBottom + 88.dp else navBottom + 152.dp
 
     fun leaveEdit() { editing = false; focusManager.clearFocus() }
     fun startEdit() {
@@ -89,6 +95,12 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     }
     fun submit() { browser.go(field.text); leaveEdit() }
 
+    val activity = LocalContext.current as? Activity
+    val secure = active && tab?.incognito == true
+    DisposableEffect(secure) {
+        if (secure) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { if (secure) activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+    }
     LaunchedEffect(browser.selectedId) { editing = false }
     LaunchedEffect(tab?.id, tab?.session, tab?.crashed) {
         if (tab != null && tab.session == null && tab.url.isNotEmpty() && !tab.crashed) browser.ensure(tab)
@@ -111,7 +123,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                     tab.crashed -> Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
                         EmptyState(Ic.Alert, "This page crashed", "The engine stopped on this tab. Your other tabs are fine.", "Reload") { browser.recover(tab) }
                     }
-                    tab.session == null -> StartPage(::startEdit)
+                    tab.session == null -> StartPage(tab.incognito, ::startEdit)
                     else -> GeckoPage(browser, tab, Modifier.fillMaxSize().padding(top = pageTop, bottom = pageBottom))
                 }
             }
@@ -150,6 +162,10 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                 } else {
                     val host = UrlInput.host(tab?.url.orEmpty())
                     Row(Modifier.weight(1f).fillMaxSize().pressable { startEdit() }, verticalAlignment = Alignment.CenterVertically) {
+                        if (tab?.incognito == true) {
+                            Icon(Ic.Private, Aura.AccentText, Modifier.size(18.dp))
+                            Spacer(Modifier.size(8.dp))
+                        }
                         if (host.isNotEmpty()) {
                             Icon(
                                 if (tab?.secure == true) Ic.Lock else Ic.Alert,
@@ -191,16 +207,20 @@ private fun NavButton(icon: Ic, backdrop: Backdrop, enabled: Boolean, onClick: (
 
 /** What a tab with no page shows: what the app is for, and the one thing to do next. */
 @Composable
-private fun StartPage(onSearch: () -> Unit) {
+private fun StartPage(incognito: Boolean, onSearch: () -> Unit) {
     Column(
         Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp).padding(bottom = 120.dp).staggerIn(0),
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(Ic.Shield, Aura.Muted, Modifier.size(36.dp))
+        Icon(if (incognito) Ic.Private else Ic.Shield, Aura.Muted, Modifier.size(36.dp))
         Spacer(Modifier.height(12.dp))
-        BasicText("Sheer", style = ts(34f, weight = FontWeight.ExtraBold))
+        BasicText(if (incognito) "Private tab" else "Sheer", style = ts(34f, weight = FontWeight.ExtraBold))
         Spacer(Modifier.height(6.dp))
-        BasicText("Sheer keeps nothing about you: no account, no analytics, no ads.", style = ts(15f, Aura.Muted))
+        BasicText(
+            if (incognito) "No history, no cookies and no saved tabs from this tab. Close all private tabs in Tabs to wipe it."
+            else "Sheer keeps nothing about you: no account, no analytics, no ads.",
+            style = ts(15f, Aura.Muted),
+        )
         Spacer(Modifier.height(18.dp))
         AccentPill("Search or type an address", onSearch)
     }

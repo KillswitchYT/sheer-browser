@@ -30,5 +30,8 @@ object Settings {
     /** The address bar at the top instead of the bottom. Test builds can flip the default with -PtestTop=true. */
     fun addressTop(c: Context) = int(c, "top", if (c.resources.getBoolean(R.bool.default_address_top)) 1 else 0) == 1
 
+    /** The page scrolls under the glass bars (the look it started with). Off keeps the page clear of the bars. */
+    fun pageUnder(c: Context) = int(c, "under", 1) == 1
+
     fun flag(c: Context, k: String, on: Boolean) = setInt(c, k, if (on) 1 else 0)
 }

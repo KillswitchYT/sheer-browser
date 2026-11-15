@@ -32,7 +32,19 @@ fun TabsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOpen:
             Column(Modifier.fillMaxWidth().staggerIn(0, seen.add("tabs-head")), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 PageTitle("Tabs", if (tabs.size == 1) "1 page open" else "${tabs.size} pages open")
                 Box(Modifier.padding(start = 4.dp)) { AccentPill("New tab", { browser.newTab(); onOpen() }) }
-                Spacer(Modifier.height(10.dp))
+                Row(Modifier.pressable { browser.newTab(incognito = true); onOpen() }.padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Ic.Private, Aura.AccentText, Modifier.size(20.dp))
+                    Spacer(Modifier.size(10.dp))
+                    BasicText("New private tab", style = ts(15f, Aura.AccentText, FontWeight.Bold))
+                }
+                if (tabs.any { it.incognito }) {
+                    Row(Modifier.pressable { browser.closePrivate() }.padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Ic.Close, Aura.Muted, Modifier.size(20.dp))
+                        Spacer(Modifier.size(10.dp))
+                        BasicText("Close all private tabs", style = ts(15f, Aura.Muted, FontWeight.Bold))
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
             }
         }
         items(tabs.toList(), key = { it.id }) { t ->
@@ -44,11 +56,17 @@ fun TabsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOpen:
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f).pressable { browser.select(t.id); onOpen() }.padding(vertical = 16.dp, horizontal = 4.dp)) {
-                    BasicText(
-                        t.title.ifEmpty { host.ifEmpty { "New tab" } },
-                        style = ts(16f, if (selected) Aura.AccentText else Aura.Text, FontWeight.Bold),
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (t.incognito) {
+                            Icon(Ic.Private, Aura.Muted, Modifier.size(16.dp))
+                            Spacer(Modifier.size(6.dp))
+                        }
+                        BasicText(
+                            t.title.ifEmpty { host.ifEmpty { if (t.incognito) "New private tab" else "New tab" } },
+                            style = ts(16f, if (selected) Aura.AccentText else Aura.Text, FontWeight.Bold),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     BasicText(
                         host.ifEmpty { "Start page" },
                         style = ts(13f, Aura.Muted), maxLines = 1, overflow = TextOverflow.Ellipsis,

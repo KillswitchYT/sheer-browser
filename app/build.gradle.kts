@@ -60,7 +60,10 @@ android {
         }
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        resValues = true // for the test-only default of the address bar position
+    }
 
     packaging {
         // Firefox itself ships its native libraries this way.

@@ -109,7 +109,7 @@ fun LiquidButton(
                     } else if (!tint.isSpecified) {
                         drawRect(
                             if (frosted) (if (Aura.isDark) Color(0xFF0E1522).copy(0.64f) else Color.White.copy(0.68f))
-                            else (if (Aura.isDark) Color.Black.copy(0.12f) else Color.White.copy(0.10f)),
+                            else (if (Aura.isDark) Color.Black.copy(0.17f) else Color.Black.copy(0.05f)),
                         )
                     }
                 }

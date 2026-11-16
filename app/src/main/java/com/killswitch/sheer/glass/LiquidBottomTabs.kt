@@ -75,8 +75,8 @@ fun LiquidBottomTabs(
     val frosted = UiPrefs.frosted
     val containerColor =
         if (frosted) { if (isLightTheme) Color.White.copy(0.72f) else Color(0xFF0E1522).copy(0.70f) }
-        else if (isLightTheme) Color.White.copy(0.10f)
-        else Color.Black.copy(0.12f)
+        else if (isLightTheme) Color.Black.copy(0.05f)
+        else Color.Black.copy(0.17f)
     val blurDp = if (frosted) 14f else 0f // clear glass has no blur
 
     val tabsBackdrop = rememberLayerBackdrop()

@@ -50,6 +50,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.killswitch.sheer.BTab
@@ -83,9 +84,15 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     val top = UiPrefs.addressTop
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val pageTop = if (top) statusTop + 64.dp else statusTop
+    // Bars at the top: the tab bar sits under the status bar (8 dp gap, 64 dp tall), the address row under it (8 dp gap, 48 dp tall).
     val under = UiPrefs.pageUnder
-    val pageBottom = if (under) 0.dp else if (top) navBottom + 88.dp else navBottom + 152.dp
+    // Page under the bars: the page fills the whole screen and the bars float over it, so no strip of background shows above or below it.
+    // Off: the page stops where the bars end, and the bars sit on the dark scene.
+    val pageTop = if (under) 0.dp else if (top) statusTop + 136.dp else statusTop
+    // Where text screens (start page, crash page) may sit so the bars never cover them.
+    val contentTop = if (top) statusTop + 136.dp else statusTop
+    val contentBottom = if (top) navBottom + 24.dp else 120.dp
+    val pageBottom = if (under) 0.dp else if (top) navBottom else navBottom + 152.dp
 
     fun leaveEdit() { editing = false; focusManager.clearFocus() }
     fun startEdit() {
@@ -120,10 +127,10 @@ fun BrowseTab(browser: Browser, active: Boolean) {
             Canvas(Modifier.fillMaxSize()) { drawAuraScene() }
             if (tab != null) {
                 when {
-                    tab.crashed -> Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
+                    tab.crashed -> Box(Modifier.fillMaxSize().padding(top = contentTop).padding(horizontal = 16.dp)) {
                         EmptyState(Ic.Alert, "This page crashed", "The engine stopped on this tab. Your other tabs are fine.", "Reload") { browser.recover(tab) }
                     }
-                    tab.session == null -> StartPage(tab.incognito, ::startEdit)
+                    tab.session == null -> StartPage(tab.incognito, contentTop, contentBottom, ::startEdit)
                     else -> GeckoPage(browser, tab, Modifier.fillMaxSize().padding(top = pageTop, bottom = pageBottom))
                 }
             }
@@ -134,7 +141,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
         }
 
         Row(
-            (if (top) Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp)
+            (if (top) Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 80.dp)
             else Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().imePadding()
                 .padding(start = 16.dp, end = 16.dp, bottom = if (editing) 8.dp else 96.dp)),
             verticalAlignment = Alignment.CenterVertically,
@@ -207,9 +214,9 @@ private fun NavButton(icon: Ic, backdrop: Backdrop, enabled: Boolean, onClick: (
 
 /** What a tab with no page shows: what the app is for, and the one thing to do next. */
 @Composable
-private fun StartPage(incognito: Boolean, onSearch: () -> Unit) {
+private fun StartPage(incognito: Boolean, topInset: Dp, bottomInset: Dp, onSearch: () -> Unit) {
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp).padding(bottom = 120.dp).staggerIn(0),
+        Modifier.fillMaxSize().padding(top = topInset, bottom = bottomInset).padding(horizontal = 20.dp).staggerIn(0),
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(if (incognito) Ic.Private else Ic.Shield, Aura.Muted, Modifier.size(36.dp))

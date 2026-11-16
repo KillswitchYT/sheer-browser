@@ -210,7 +210,7 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
         item { Column(Modifier.staggerIn(0, seen.add("set-head"))) { PageTitle("Settings", "Kept on this phone only") } }
 
         item {
-            Section(1, seen, "Appearance", "Theme, and where the address bar sits.") {
+            Section(1, seen, "Appearance", "Theme, and where the bars sit.") {
                 THEMES.forEachIndexed { i, name ->
                     Choice(name, null, theme == i, i == 0) {
                         theme = i
@@ -219,7 +219,7 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                         Gecko.applyColorScheme(ctx)
                     }
                 }
-                ToggleRow("Address bar at the top", "The tab bar stays at the bottom.", top, false) {
+                ToggleRow("Bars at the top", "The tab bar goes to the very top and the address bar sits under it.", top, false) {
                     top = it; Settings.flag(ctx, "top", it); UiPrefs.addressTop = it
                 }
                 ToggleRow("Frosted glass", "Blurs and tints the bars so their text stays readable on any page. Off is clear glass.", frosted, false) {

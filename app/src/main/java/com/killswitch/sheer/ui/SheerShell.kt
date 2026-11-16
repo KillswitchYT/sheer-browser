@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -130,7 +131,10 @@ fun SheerShell(browser: Browser, jump: Int) {
     val reach = .10f + .04f * (steps - 1)
 
     val bars = WindowInsets.systemBars.asPaddingValues()
-    val pad = PaddingValues(16.dp, bars.calculateTopPadding() + 12.dp, 16.dp, bars.calculateBottomPadding() + 110.dp)
+    // With the bars at the top the lists start below the tab bar (8 + 64 + 12 dp) and need no room at the bottom.
+    val barsTop = UiPrefs.addressTop
+    val pad = if (barsTop) PaddingValues(16.dp, bars.calculateTopPadding() + 84.dp, 16.dp, bars.calculateBottomPadding() + 24.dp)
+    else PaddingValues(16.dp, bars.calculateTopPadding() + 12.dp, 16.dp, bars.calculateBottomPadding() + 110.dp)
 
     val page: @Composable (Int, Boolean) -> Unit = { i, active ->
         val seen = seenFor[i]
@@ -182,7 +186,8 @@ fun SheerShell(browser: Browser, jump: Int) {
 
         LiquidBottomTabs(
             selectedTabIndex = { tab }, onTabSelected = { switchTo(it) }, backdrop = backdrop, tabsCount = TABS.size,
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = if (barsTop) Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp)
+            else Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             TABS.forEachIndexed { i, t ->
                 LiquidBottomTab({ switchTo(i) }) {

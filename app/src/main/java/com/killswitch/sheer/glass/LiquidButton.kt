@@ -68,8 +68,7 @@ fun LiquidButton(
                         blur(14f.dp.toPx())
                         lens(8f.dp.toPx(), 14f.dp.toPx())
                     } else {
-                        blur(2f.dp.toPx())
-                        lens(12f.dp.toPx(), 24f.dp.toPx())
+                        lens(14f.dp.toPx(), 28f.dp.toPx(), depthEffect = true, chromaticAberration = true)
                     }
                 },
                 layerBlock = if (isInteractive) {
@@ -107,8 +106,11 @@ fun LiquidButton(
                     }
                     if (surfaceColor.isSpecified) {
                         drawRect(surfaceColor)
-                    } else if (frosted && !tint.isSpecified) {
-                        drawRect(if (Aura.isDark) Color(0xFF0E1522).copy(0.64f) else Color.White.copy(0.68f))
+                    } else if (!tint.isSpecified) {
+                        drawRect(
+                            if (frosted) (if (Aura.isDark) Color(0xFF0E1522).copy(0.64f) else Color.White.copy(0.68f))
+                            else (if (Aura.isDark) Color.Black.copy(0.12f) else Color.White.copy(0.10f)),
+                        )
                     }
                 }
             )

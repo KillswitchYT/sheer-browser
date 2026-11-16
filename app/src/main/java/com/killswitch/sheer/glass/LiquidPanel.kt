@@ -24,6 +24,7 @@ import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.shapes.Capsule
 import com.kyant.shapes.RoundedRectangle
 
@@ -82,14 +83,16 @@ fun LiquidField(
                         blur(14f.dp.toPx())
                         lens(8f.dp.toPx(), 14f.dp.toPx())
                     } else {
-                        blur(2f.dp.toPx())
-                        lens(12f.dp.toPx(), 24f.dp.toPx())
+                        // Clear glass: no blur at all, so the page behind stays sharp, and a strong lens that bends it at the rim.
+                        lens(16f.dp.toPx(), 32f.dp.toPx(), depthEffect = true, chromaticAberration = true)
                     }
                 },
+                highlight = { Highlight.Default },
+                innerShadow = { if (frosted) null else InnerShadow(radius = 6f.dp, alpha = 0.25f) },
                 onDrawSurface = {
                     drawRect(
                         if (frosted) (if (isLightTheme) Color.White.copy(0.68f) else Color(0xFF0E1522).copy(0.64f))
-                        else (if (isLightTheme) Color.White.copy(0.55f) else Color(0xFF121212).copy(0.45f))
+                        else (if (isLightTheme) Color.White.copy(0.10f) else Color.Black.copy(0.12f))
                     )
                 }
             )

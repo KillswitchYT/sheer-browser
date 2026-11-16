@@ -87,6 +87,14 @@ fun ts(size: Float, color: Color = Aura.Text, weight: FontWeight = FontWeight.Me
     letterSpacing = tracking.sp, fontFeatureSettings = "tnum",
 )
 
+/** Like [ts], with a soft shadow, for words that sit on clear glass over a page. Light words get a dark shadow, dark words a light one. */
+fun tsg(size: Float, color: Color = Aura.Text, weight: FontWeight = FontWeight.Medium) = ts(size, color, weight).copy(
+    shadow = androidx.compose.ui.graphics.Shadow(
+        color = if (Aura.isDark) Color.Black.copy(alpha = .65f) else Color.White.copy(alpha = .8f),
+        offset = androidx.compose.ui.geometry.Offset(0f, 2f), blurRadius = 8f,
+    ),
+)
+
 fun centered(s: TextStyle) = s.copy(textAlign = TextAlign.Center)
 
 /** The scene behind everything, which the glass refracts. One cool graphite hue, only lighter and darker. */

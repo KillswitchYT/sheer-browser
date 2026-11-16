@@ -33,8 +33,8 @@ object Settings {
     /** The page scrolls under the glass bars (the look it started with). Off keeps the page clear of the bars. */
     fun pageUnder(c: Context) = int(c, "under", 1) == 1
 
-    /** Frosted glass on the bars (readable over any page). Off is the clear look with the strong lens. */
-    fun frosted(c: Context) = int(c, "frost", 1) == 1
+    /** Frosted glass on the bars (blurred and tinted, readable over any page). Off, the default, is clear glass: no blur, almost no tint, a strong lens at the rim. */
+    fun frosted(c: Context) = int(c, "frost2", 0) == 1
 
     fun flag(c: Context, k: String, on: Boolean) = setInt(c, k, if (on) 1 else 0)
 }

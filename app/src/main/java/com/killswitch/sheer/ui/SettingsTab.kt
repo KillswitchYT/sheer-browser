@@ -222,8 +222,8 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                 ToggleRow("Address bar at the top", "The tab bar stays at the bottom.", top, false) {
                     top = it; Settings.flag(ctx, "top", it); UiPrefs.addressTop = it
                 }
-                ToggleRow("Frosted glass", "Blurs what is behind the bars so their text stays readable. Off is the clear lens look.", frosted, false) {
-                    frosted = it; Settings.flag(ctx, "frost", it); UiPrefs.frosted = it
+                ToggleRow("Frosted glass", "Blurs and tints the bars so their text stays readable on any page. Off is clear glass.", frosted, false) {
+                    frosted = it; Settings.flag(ctx, "frost2", it); UiPrefs.frosted = it
                 }
                 ToggleRow("Page scrolls under the bars", "The glass blurs the page. The end of a page can hide behind the bars.", under, false) {
                     under = it; Settings.flag(ctx, "under", it); UiPrefs.pageUnder = it

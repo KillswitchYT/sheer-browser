@@ -189,11 +189,11 @@ fun SheerShell(browser: Browser, jump: Int) {
                     val on by selectAnim(tab == i)
                     val hop by animateFloatAsState(if (tab == i) 1f else 0f, spring(dampingRatio = .45f, stiffness = 380f), label = "tabHop")
                     // Dim grey on glass was hard to read over a bright page. Frosted uses near-full strength text for every tab.
-                    val rest = if (UiPrefs.frosted) Aura.Text.copy(alpha = .78f) else Aura.Muted
+                    val rest = Aura.Text.copy(alpha = if (UiPrefs.frosted) .78f else .9f)
                     Icon(t.icon, lerp(rest, Aura.Text, on), Modifier.size(26.dp).graphicsLayer {
                         scaleX = 1f + .14f * hop; scaleY = scaleX; translationY = -3.dp.toPx() * hop
                     })
-                    BasicText(t.label, style = ts(12f, lerp(rest, Aura.Text, on), FontWeight.ExtraBold))
+                    BasicText(t.label, style = tsg(12f, lerp(rest, Aura.Text, on), FontWeight.ExtraBold))
                 }
             }
         }

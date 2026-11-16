@@ -147,17 +147,17 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                     Icon(Ic.Search, Aura.Muted, Modifier.size(18.dp))
                     Spacer(Modifier.size(10.dp))
                     BasicTextField(
-                        field, { field = it }, Modifier.weight(1f).focusRequester(focus), singleLine = true, textStyle = ts(15f),
+                        field, { field = it }, Modifier.weight(1f).focusRequester(focus), singleLine = true, textStyle = tsg(15f),
                         cursorBrush = SolidColor(Aura.Accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go, keyboardType = KeyboardType.Uri),
                         keyboardActions = KeyboardActions(onGo = { submit() }),
                         decorationBox = { inner ->
-                            if (field.text.isEmpty()) BasicText("Search or type an address", style = ts(15f, Aura.Muted))
+                            if (field.text.isEmpty()) BasicText("Search or type an address", style = tsg(15f, Aura.Muted))
                             inner()
                         },
                     )
                     Box(Modifier.pressable { leaveEdit() }.padding(start = 10.dp, top = 8.dp, bottom = 8.dp)) {
-                        BasicText("Cancel", style = ts(14f, Aura.AccentText, FontWeight.Bold))
+                        BasicText("Cancel", style = tsg(14f, Aura.AccentText, FontWeight.Bold))
                     }
                 } else {
                     val host = UrlInput.host(tab?.url.orEmpty())
@@ -178,7 +178,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                         }
                         BasicText(
                             host.ifEmpty { "Search or type an address" },
-                            style = ts(15f, if (host.isEmpty()) Aura.Muted else Aura.Text, FontWeight.Bold),
+                            style = tsg(15f, if (host.isEmpty()) Aura.Muted else Aura.Text, FontWeight.Bold),
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                     }

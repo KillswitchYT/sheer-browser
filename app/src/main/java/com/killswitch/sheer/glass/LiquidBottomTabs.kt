@@ -75,9 +75,9 @@ fun LiquidBottomTabs(
     val frosted = UiPrefs.frosted
     val containerColor =
         if (frosted) { if (isLightTheme) Color.White.copy(0.72f) else Color(0xFF0E1522).copy(0.70f) }
-        else if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f)
-        else Color(0xFF121212).copy(0.4f)
-    val blurDp = if (frosted) 14f else 8f
+        else if (isLightTheme) Color.White.copy(0.10f)
+        else Color.Black.copy(0.12f)
+    val blurDp = if (frosted) 14f else 0f // clear glass has no blur
 
     val tabsBackdrop = rememberLayerBackdrop()
 
@@ -174,8 +174,8 @@ fun LiquidBottomTabs(
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
-                        blur(blurDp.dp.toPx())
-                        if (frosted) lens(12f.dp.toPx(), 18f.dp.toPx()) else lens(24f.dp.toPx(), 24f.dp.toPx())
+                        if (blurDp > 0f) blur(blurDp.dp.toPx())
+                        if (frosted) lens(12f.dp.toPx(), 18f.dp.toPx()) else lens(24f.dp.toPx(), 36f.dp.toPx(), depthEffect = true)
                     },
                     layerBlock = {
                         val progress = dampedDragAnimation.pressProgress
@@ -212,7 +212,7 @@ fun LiquidBottomTabs(
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
-                            blur(blurDp.dp.toPx())
+                            if (blurDp > 0f) blur(blurDp.dp.toPx())
                             val h = if (frosted) 12f else 24f
                             lens(h.dp.toPx() * progress, h.dp.toPx() * progress)
                         },
@@ -249,8 +249,7 @@ fun LiquidBottomTabs(
                         val progress = dampedDragAnimation.pressProgress
                         // The icons and labels pass through this lens while the bubble is held. Frosted keeps it gentle and drops the colour
                         // fringes, which is what made them smear.
-                        if (frosted) lens(5f.dp.toPx() * progress, 8f.dp.toPx() * progress)
-                        else lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, chromaticAberration = true)
+                        lens(5f.dp.toPx() * progress, 8f.dp.toPx() * progress)
                     },
                     highlight = {
                         val progress = dampedDragAnimation.pressProgress

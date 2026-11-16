@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
     private fun start(b: Bundle?) {
         UiPrefs.addressTop = Settings.addressTop(this)
         UiPrefs.pageUnder = Settings.pageUnder(this)
+        UiPrefs.frosted = Settings.frosted(this)
         // The theme is one shared object, so every Activity applies the saved choice itself before drawing anything.
         Aura.apply(Settings.theme(this), (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
         val bars = if (Aura.isDark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)

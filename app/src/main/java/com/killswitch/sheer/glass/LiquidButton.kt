@@ -23,6 +23,8 @@ import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.compose.ui.util.lerp
 import com.kyant.backdrop.Backdrop
 import com.killswitch.sheer.glass.InteractiveHighlight
+import com.killswitch.sheer.ui.Aura
+import com.killswitch.sheer.ui.UiPrefs
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -47,6 +49,7 @@ fun LiquidButton(
     content: @Composable RowScope.() -> Unit
 ) {
     val animationScope = rememberCoroutineScope()
+    val frosted = UiPrefs.frosted
 
     val interactiveHighlight = remember(animationScope) {
         InteractiveHighlight(
@@ -61,8 +64,13 @@ fun LiquidButton(
                 shape = { Capsule() },
                 effects = {
                     vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                    if (frosted) {
+                        blur(14f.dp.toPx())
+                        lens(8f.dp.toPx(), 14f.dp.toPx())
+                    } else {
+                        blur(2f.dp.toPx())
+                        lens(12f.dp.toPx(), 24f.dp.toPx())
+                    }
                 },
                 layerBlock = if (isInteractive) {
                     {
@@ -99,6 +107,8 @@ fun LiquidButton(
                     }
                     if (surfaceColor.isSpecified) {
                         drawRect(surfaceColor)
+                    } else if (frosted && !tint.isSpecified) {
+                        drawRect(if (Aura.isDark) Color(0xFF0E1522).copy(0.64f) else Color.White.copy(0.68f))
                     }
                 }
             )

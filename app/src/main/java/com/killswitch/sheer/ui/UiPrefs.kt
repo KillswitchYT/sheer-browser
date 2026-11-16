@@ -11,4 +11,7 @@ object UiPrefs {
 
     /** The page runs under the bottom glass bars, so the bars blur it. Off keeps the page clear of them. */
     var pageUnder by mutableStateOf(true)
+
+    /** Frosted glass: the bars blur what is behind them and sit on a stronger tint, so their text and icons stay readable over any page. */
+    var frosted by mutableStateOf(true)
 }

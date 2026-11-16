@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.killswitch.sheer.ui.Aura
+import com.killswitch.sheer.ui.UiPrefs
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -68,6 +69,7 @@ fun LiquidField(
     content: @Composable RowScope.() -> Unit,
 ) {
     val isLightTheme = !Aura.isDark
+    val frosted = UiPrefs.frosted
     Row(
         modifier
             .drawBackdrop(
@@ -75,10 +77,21 @@ fun LiquidField(
                 shape = { Capsule() },
                 effects = {
                     vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                    if (frosted) {
+                        // Frosted: the page behind is blurred hard and only the rim bends, so the text on top stays easy to read.
+                        blur(14f.dp.toPx())
+                        lens(8f.dp.toPx(), 14f.dp.toPx())
+                    } else {
+                        blur(2f.dp.toPx())
+                        lens(12f.dp.toPx(), 24f.dp.toPx())
+                    }
                 },
-                onDrawSurface = { drawRect(if (isLightTheme) Color.White.copy(0.55f) else Color(0xFF121212).copy(0.45f)) }
+                onDrawSurface = {
+                    drawRect(
+                        if (frosted) (if (isLightTheme) Color.White.copy(0.68f) else Color(0xFF0E1522).copy(0.64f))
+                        else (if (isLightTheme) Color.White.copy(0.55f) else Color(0xFF121212).copy(0.45f))
+                    )
+                }
             )
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,

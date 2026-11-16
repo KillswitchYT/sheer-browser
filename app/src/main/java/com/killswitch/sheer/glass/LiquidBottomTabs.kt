@@ -38,6 +38,7 @@ import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.killswitch.sheer.ui.Aura
+import com.killswitch.sheer.ui.UiPrefs
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -71,9 +72,12 @@ fun LiquidBottomTabs(
     val accentColor =
         if (isLightTheme) Aura.Text
         else Color(0xFFE6E8EF)
+    val frosted = UiPrefs.frosted
     val containerColor =
-        if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f)
+        if (frosted) { if (isLightTheme) Color.White.copy(0.72f) else Color(0xFF0E1522).copy(0.70f) }
+        else if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f)
         else Color(0xFF121212).copy(0.4f)
+    val blurDp = if (frosted) 14f else 8f
 
     val tabsBackdrop = rememberLayerBackdrop()
 
@@ -170,8 +174,8 @@ fun LiquidBottomTabs(
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        blur(blurDp.dp.toPx())
+                        if (frosted) lens(12f.dp.toPx(), 18f.dp.toPx()) else lens(24f.dp.toPx(), 24f.dp.toPx())
                     },
                     layerBlock = {
                         val progress = dampedDragAnimation.pressProgress
@@ -208,11 +212,9 @@ fun LiquidBottomTabs(
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(
-                                24f.dp.toPx() * progress,
-                                24f.dp.toPx() * progress
-                            )
+                            blur(blurDp.dp.toPx())
+                            val h = if (frosted) 12f else 24f
+                            lens(h.dp.toPx() * progress, h.dp.toPx() * progress)
                         },
                         highlight = {
                             val progress = dampedDragAnimation.pressProgress
@@ -245,11 +247,10 @@ fun LiquidBottomTabs(
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
-                        lens(
-                            10f.dp.toPx() * progress,
-                            14f.dp.toPx() * progress,
-                            chromaticAberration = true
-                        )
+                        // The icons and labels pass through this lens while the bubble is held. Frosted keeps it gentle and drops the colour
+                        // fringes, which is what made them smear.
+                        if (frosted) lens(5f.dp.toPx() * progress, 8f.dp.toPx() * progress)
+                        else lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, chromaticAberration = true)
                     },
                     highlight = {
                         val progress = dampedDragAnimation.pressProgress

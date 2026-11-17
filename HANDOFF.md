@@ -36,7 +36,7 @@ The user builds nothing locally. Everything compiles on GitHub Actions and is dr
   (`compileSdk { version = release(37) { minorApiLevel = 2 } }`), because GeckoView 160 refuses anything older. The R8 release is the app.
 - Never touch the user's other repos (bulletproof-alarm, Mini-Compressor, MiniCompressor, cool-keyboard, idk). aura-alarm is read-only reference.
 
-## 4. What exists (v0.1.15)
+## 4. What exists (v0.1.16 and later)
 Tabs: Browse, Tabs, History, Settings (glass bottom tab bar, Kyant animation kept).
 - **Browse**: GeckoView page (TextureView backend, so glass can see it) with a glass address bar, back, forward, reload/stop, progress line,
   start page, crash page. Tab restore after restart (saved a moment after every change). New-window links open new tabs. Links from other apps
@@ -44,9 +44,9 @@ Tabs: Browse, Tabs, History, Settings (glass bottom tab bar, Kyant animation kep
 - **Tabs**: list, new tab, close, New private tab, Close all private tabs.
 - **Private tabs**: GeckoView private mode, no history delegate, never saved, FLAG_SECURE while showing (blocks screenshots).
 - **History**: own SQLite store (`History.kt`) fed by GeckoSession.HistoryDelegate (normal tabs only), search, grouped by day, delete one, clear (two taps), visited-link colouring.
-- **Settings**: Appearance (theme, "Bars at the top", "Page scrolls under the bars" default on, "Frosted glass" default off), Search (Google default,
+- **Settings**: Appearance (theme, "Bars at the top", "Page scrolls under the bars" default on, "Frosted glass" default off, "Calm glass while scrolling" default on), Search (Google default,
   DuckDuckGo, Brave Search, Startpage), Privacy (strict tracking protection, HTTPS only, dangerous site warnings), Clear browsing data (history,
-  cookies and site data, cache, current site; two taps), Updates, About (version, engine, Recent stops).
+  cookies and site data, cache, current site; two taps), Updates, About (version, engine, Recent stops, Smoothness frame meter + reset).
 - **Updater** (`Updater.kt`, `Patch.kt`): opt-in "Check for updates" reads `update.json` from the GitHub release `latest`, downloads a ~2.4 MB patch
   (with resume), rebuilds the new APK from the installed APK, checks SHA-256, hands it to PackageInstaller (`InstallReceiver`). Falls back to the
   full 92 MB download only on an explicit tap. Needs REQUEST_INSTALL_PACKAGES (user allows once).
@@ -56,7 +56,7 @@ Tabs: Browse, Tabs, History, Settings (glass bottom tab bar, Kyant animation kep
   remote debugging and about:config off, safe browsing toggle. Telemetry/remote settings NOT yet audited.
 - Permissions in the built APK: INTERNET, REQUEST_INSTALL_PACKAGES (ours); ACCESS_NETWORK_STATE, WAKE_LOCK, MODIFY_AUDIO_SETTINGS (GeckoView's).
 
-Prefs keys (SharedPreferences "sheer"): th, se2 (engine index, Google = 0), https, etc, sb, top (bars at top), under (page under bars), frost2, tabs (json), exit_seen.
+Prefs keys (SharedPreferences "sheer"): th, se2 (engine index, Google = 0), https, etc, sb, top (bars at top), under (page under bars), frost2, calm (calm glass), tabs (json), exit_seen.
 
 ## 5. Code map (`app/src/main/java/com/killswitch/sheer/`)
 - `MainActivity`, `SheerApp` (Application, holds `Browser`, installs CrashLog), `Browser.kt` (BTab/Browser: sessions, delegates, restore/save, recovery, private tabs).
@@ -65,6 +65,12 @@ Prefs keys (SharedPreferences "sheer"): th, se2 (engine index, Google = 0), http
 - `glass/`: Kyant copies (LiquidBottomTabs, LiquidField/LiquidPanel, LiquidButton, LiquidToggle, LiquidSlider...). Frosted vs clear look is switched by `UiPrefs.frosted`.
 - Layout rules in `BrowseTab`: bars at top = tab bar under the status bar (8 dp gap, 64 dp), address row under it (top 80 dp, 48 dp tall). Page under bars = page fills the whole screen
   (pageTop 0, pageBottom 0). Off = page stops where the bars end and the dark scene shows behind them.
+- Performance (v0.1.16+): the page is a TextureView so every Gecko frame while scrolling makes HWUI redo ~6 glass elements (each an offscreen layer replaying the page plus a colour-filter and a lens/dispersion shader pass). On a tile-based GPU (Adreno 618) the render-target switches are the likely cost, not the shader area.
+  Measures taken: `FrameMeter.kt` (Window.OnFrameMetricsAvailableListener, Settings > About > Smoothness / Reset smoothness counter; counts the app window only, not Gecko's own compositing);
+  `baseline-prof.txt` (our code + Kyant) plus `androidx.profileinstaller` (library profiles were already merged by AGP but a sideloaded app never installs them without ProfileInstaller);
+  the loading bar reads its animated progress only in a `drawBehind`, so a page load no longer recomposes the whole Browse screen every frame;
+  "Calm glass while scrolling": `GeckoSession.ScrollDelegate` -> `ScrollWatch.moved()` -> `UiPrefs.scrolling` (off 250 ms after the last report); the bars refract `rememberBackdrop(live) { if (!(calm && scrolling)) drawBackdrop() }`, which only reads the state while drawing, so nothing recomposes.
+  R8 was already on (`isMinifyEnabled = true`), it does not affect scrolling. Not done on purpose (it removes the live-glass look): SurfaceView page backend. Next lever if scrolling is still bad: a "Fast page" mode (SurfaceView, glass over the static scene).
 - IMPORTANT: glass bars must never sample the layer they are drawn inside. The Browse page has its own `layerBackdrop` and the bars are drawn OUTSIDE it.
   Doing it wrong crashed the app instantly (native stack overflow in the render thread).
 
@@ -116,6 +122,7 @@ the cause of the earlier "This page crashed" (unknown; auto-recovery and Recent 
 - Native messaging only works for privileged built-in extensions talking to the app, so extensions that need a desktop companion stay broken.
 
 ## 9. Known issues and open threads
+- Scrolling lag reported by the user (v0.1.15). v0.1.16 adds the frame meter and the ProfileInstaller; the "Calm glass while scrolling" build is unmeasured. Ask the user for the Smoothness numbers with the toggle on and off (and Frosted on and off) before changing more.
 - Last open question to the user: text and icons on the clear-glass bars are weak on bright pages in dark theme. Options offered: raise the tint more, or make label colour follow what is behind. They asked for "5% darker", done (v0.1.14). Wait for feedback.
 - With bars at the top and "Page scrolls under the bars" on, the top of the page starts under the bars (visible through the glass, not tappable until scrolled). Status bar icons sit on the page.
 - Basic browser features that are still MISSING (important, tell the user honestly): file downloads (`onExternalResponse` unhandled), site permission prompts (camera, mic, location, notifications),

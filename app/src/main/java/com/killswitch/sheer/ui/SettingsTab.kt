@@ -205,6 +205,7 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
     var top by remember { mutableStateOf(UiPrefs.addressTop) }
     var under by remember { mutableStateOf(UiPrefs.pageUnder) }
     var frosted by remember { mutableStateOf(UiPrefs.frosted) }
+    var calm by remember { mutableStateOf(UiPrefs.calmGlass) }
     val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?" }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -228,6 +229,9 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                 }
                 ToggleRow("Page scrolls under the bars", "The glass blurs the page. The end of a page can hide behind the bars.", under, false) {
                     under = it; Settings.flag(ctx, "under", it); UiPrefs.pageUnder = it
+                }
+                ToggleRow("Calm glass while scrolling", "While a page moves, the bars skip bending it and bring it back when it rests. Smoother scrolling.", calm, false) {
+                    calm = it; Settings.flag(ctx, "calm", it); UiPrefs.calmGlass = it
                 }
             }
         }

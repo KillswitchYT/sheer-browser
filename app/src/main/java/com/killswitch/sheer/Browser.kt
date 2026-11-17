@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.killswitch.sheer.ui.ScrollWatch
 import org.json.JSONArray
 import org.json.JSONObject
 import org.mozilla.geckoview.GeckoResult
@@ -137,6 +138,7 @@ class Browser(private val app: Context) {
         s.navigationDelegate = null
         s.progressDelegate = null
         s.contentDelegate = null
+        s.scrollDelegate = null
         s.historyDelegate = null
         s.close()
         t.session = null
@@ -211,6 +213,12 @@ class Browser(private val app: Context) {
     }
 
     private fun attach(t: BTab, s: GeckoSession) {
+        // Tells the glass bars that the page is moving, so they can go easy on the GPU until it rests.
+        s.scrollDelegate = object : GeckoSession.ScrollDelegate {
+            override fun onScrollChanged(session: GeckoSession, scrollX: Int, scrollY: Int) {
+                if (t.id == selectedId) ScrollWatch.moved()
+            }
+        }
         // History is only recorded for normal tabs. A private tab gets no delegate at all, so there is nothing to record and links never
         // show as visited.
         if (!t.incognito) {

@@ -36,5 +36,8 @@ object Settings {
     /** Frosted glass on the bars (blurred and tinted, readable over any page). Off, the default, is clear glass: no blur, almost no tint, a strong lens at the rim. */
     fun frosted(c: Context) = int(c, "frost2", 0) == 1
 
+    /** While a page scrolls, the bars skip bending it (smoother). On until the person turns it off. */
+    fun calmGlass(c: Context) = int(c, "calm", 1) == 1
+
     fun flag(c: Context, k: String, on: Boolean) = setInt(c, k, if (on) 1 else 0)
 }

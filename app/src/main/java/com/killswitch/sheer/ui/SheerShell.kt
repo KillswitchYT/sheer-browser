@@ -51,6 +51,7 @@ import com.killswitch.sheer.Settings
 import com.killswitch.sheer.glass.LiquidBottomTab
 import com.killswitch.sheer.glass.LiquidBottomTabs
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
@@ -84,6 +85,8 @@ fun SheerShell(browser: Browser, jump: Int) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var dialog by remember { mutableStateOf<Pair<String, String>?>(null) }
     val backdrop = rememberLayerBackdrop()
+    // What the tab bar refracts: the same, but it draws nothing while a page scrolls and Calm glass is on.
+    val barBackdrop = rememberBackdrop(backdrop) { drawBackdrop -> if (!(UiPrefs.calmGlass && UiPrefs.scrolling)) drawBackdrop() }
     val scene = rememberLayerBackdrop()
     // One "already animated" set per tab, wiped each time you arrive, so a tab greets you with its stagger every visit.
     val seenFor = remember { Array(TABS.size) { mutableSetOf<Any>() } }
@@ -185,7 +188,7 @@ fun SheerShell(browser: Browser, jump: Int) {
         }
 
         LiquidBottomTabs(
-            selectedTabIndex = { tab }, onTabSelected = { switchTo(it) }, backdrop = backdrop, tabsCount = TABS.size,
+            selectedTabIndex = { tab }, onTabSelected = { switchTo(it) }, backdrop = barBackdrop, tabsCount = TABS.size,
             modifier = if (barsTop) Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp)
             else Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
         ) {

@@ -36,7 +36,7 @@ The user builds nothing locally. Everything compiles on GitHub Actions and is dr
   (`compileSdk { version = release(37) { minorApiLevel = 2 } }`), because GeckoView 160 refuses anything older. The R8 release is the app.
 - Never touch the user's other repos (bulletproof-alarm, Mini-Compressor, MiniCompressor, cool-keyboard, idk). aura-alarm is read-only reference.
 
-## 4. What exists (v0.1.16 and later)
+## 4. What exists (v0.1.17)
 Tabs: Browse, Tabs, History, Settings (glass bottom tab bar, Kyant animation kept).
 - **Browse**: GeckoView page (TextureView backend, so glass can see it) with a glass address bar, back, forward, reload/stop, progress line,
   start page, crash page. Tab restore after restart (saved a moment after every change). New-window links open new tabs. Links from other apps
@@ -65,7 +65,7 @@ Prefs keys (SharedPreferences "sheer"): th, se2 (engine index, Google = 0), http
 - `glass/`: Kyant copies (LiquidBottomTabs, LiquidField/LiquidPanel, LiquidButton, LiquidToggle, LiquidSlider...). Frosted vs clear look is switched by `UiPrefs.frosted`.
 - Layout rules in `BrowseTab`: bars at top = tab bar under the status bar (8 dp gap, 64 dp), address row under it (top 80 dp, 48 dp tall). Page under bars = page fills the whole screen
   (pageTop 0, pageBottom 0). Off = page stops where the bars end and the dark scene shows behind them.
-- Performance (v0.1.16+): the page is a TextureView so every Gecko frame while scrolling makes HWUI redo ~6 glass elements (each an offscreen layer replaying the page plus a colour-filter and a lens/dispersion shader pass). On a tile-based GPU (Adreno 618) the render-target switches are the likely cost, not the shader area.
+- Performance (v0.1.16 frame meter, profile and loading-bar fix; v0.1.17 calm glass): the page is a TextureView so every Gecko frame while scrolling makes HWUI redo ~6 glass elements (each an offscreen layer replaying the page plus a colour-filter and a lens/dispersion shader pass). On a tile-based GPU (Adreno 618) the render-target switches are the likely cost, not the shader area.
   Measures taken: `FrameMeter.kt` (Window.OnFrameMetricsAvailableListener, Settings > About > Smoothness / Reset smoothness counter; counts the app window only, not Gecko's own compositing);
   `baseline-prof.txt` (our code + Kyant) plus `androidx.profileinstaller` (library profiles were already merged by AGP but a sideloaded app never installs them without ProfileInstaller);
   the loading bar reads its animated progress only in a `drawBehind`, so a page load no longer recomposes the whole Browse screen every frame;
@@ -122,7 +122,7 @@ the cause of the earlier "This page crashed" (unknown; auto-recovery and Recent 
 - Native messaging only works for privileged built-in extensions talking to the app, so extensions that need a desktop companion stay broken.
 
 ## 9. Known issues and open threads
-- Scrolling lag reported by the user (v0.1.15). v0.1.16 adds the frame meter and the ProfileInstaller; the "Calm glass while scrolling" build is unmeasured. Ask the user for the Smoothness numbers with the toggle on and off (and Frosted on and off) before changing more.
+- Scrolling lag reported by the user (v0.1.15). v0.1.16 added the frame meter and the ProfileInstaller; v0.1.17 added "Calm glass while scrolling". Neither is measured on the phone yet. Ask the user for the Smoothness numbers with the toggle on and off (and Frosted on and off) before changing more.
 - Last open question to the user: text and icons on the clear-glass bars are weak on bright pages in dark theme. Options offered: raise the tint more, or make label colour follow what is behind. They asked for "5% darker", done (v0.1.14). Wait for feedback.
 - With bars at the top and "Page scrolls under the bars" on, the top of the page starts under the bars (visible through the glass, not tappable until scrolled). Status bar icons sit on the page.
 - Basic browser features that are still MISSING (important, tell the user honestly): file downloads (`onExternalResponse` unhandled), site permission prompts (camera, mic, location, notifications),

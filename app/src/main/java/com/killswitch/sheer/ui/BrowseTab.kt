@@ -37,8 +37,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -118,7 +120,8 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     BackHandler(enabled = active && !editing && tab?.canBack == true) { browser.back() }
 
     val loading = tab?.loading == true
-    val progress by animateFloatAsState(
+    // Kept as a State and only read while drawing: reading it here would recompose the whole screen on every frame of a page load.
+    val progress = animateFloatAsState(
         if (loading) (tab?.progress ?: 0) / 100f else 0f, tween(180), label = "progress",
     )
 
@@ -136,9 +139,12 @@ fun BrowseTab(browser: Browser, active: Boolean) {
             }
         }
 
-        if (progress > .001f) {
-            Box(Modifier.align(Alignment.TopStart).statusBarsPadding().fillMaxWidth(progress).height(2.dp).background(Aura.Accent))
-        }
+        Box(
+            Modifier.align(Alignment.TopStart).statusBarsPadding().fillMaxWidth().height(2.dp).drawBehind {
+                val p = progress.value
+                if (p > .001f) drawRect(Aura.Accent, size = Size(size.width * p, size.height))
+            },
+        )
 
         Row(
             (if (top) Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 80.dp)

@@ -1,0 +1,6 @@
+# Hand-written baseline profile: tells Android to compile Sheer's own code and the glass library ahead of time, so the first frames are not interpreted.
+# Compose brings its own profiles and the build merges them in. GeckoView's Java side is thin, the engine itself is native, so it is left out.
+HSPLcom/killswitch/sheer/**;->**(**)**
+Lcom/killswitch/sheer/**;
+HSPLcom/kyant/**;->**(**)**
+Lcom/kyant/**;

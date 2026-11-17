@@ -85,4 +85,6 @@ dependencies {
     implementation("org.jetbrains.compose.material:material-ripple:1.12.0")
     implementation("io.github.kyant0:backdrop:2.0.1")
     implementation("io.github.kyant0:shapes:1.2.1")
+    // Installs the baseline profile on first launch. Sheer is not installed from Play, which would normally do it. No network, no permissions.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 }

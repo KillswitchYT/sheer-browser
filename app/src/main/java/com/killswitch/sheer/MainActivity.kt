@@ -68,8 +68,14 @@ class MainActivity : ComponentActivity() {
         jump.intValue++ // bring the Browse tab to the front
     }
 
+    override fun onStart() {
+        super.onStart()
+        FrameMeter.attach(this)
+    }
+
     override fun onStop() {
         super.onStop()
+        FrameMeter.detach()
         browser.save()
     }
 }

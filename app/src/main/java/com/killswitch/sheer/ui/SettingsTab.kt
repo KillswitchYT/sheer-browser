@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.killswitch.sheer.Browser
 import com.killswitch.sheer.CrashLog
+import com.killswitch.sheer.FrameMeter
 import com.killswitch.sheer.History
 import org.mozilla.geckoview.StorageController
 import androidx.compose.runtime.LaunchedEffect
@@ -283,6 +284,11 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                 ValueRow("Version", version, true)
                 ValueRow("Engine", "Gecko", false)
                 LinkRow(Ic.Alert, "Recent stops", false) { onNotice("Recent stops", CrashLog.recent(ctx)) }
+                LinkRow(Ic.Clock, "Smoothness", false) { onNotice("Smoothness", FrameMeter.report()) }
+                LinkRow(Ic.Reload, "Reset smoothness counter", false) {
+                    FrameMeter.reset()
+                    onNotice("Counter reset", "Go to a page, scroll it for about ten seconds, then open Smoothness.")
+                }
                 LinkRow(
                     Ic.Info, "What Sheer collects", false,
                 ) {

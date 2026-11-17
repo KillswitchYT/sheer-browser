@@ -1,29 +1,25 @@
 # Testing Sheer on the phone
 
-Nothing below has been run on a device yet. Each line says what to look at.
+Nothing here is automated except the start-and-open-a-link check CI runs on an emulator. Each line says what to look at.
 
-## First, the glass test (decides how the bars look)
-1. Open any long page (a Wikipedia article). Scroll so text passes behind the address bar and the bottom tab bar.
-   - Text behind the bars looks blurred and refracted: glass over the live page works.
-   - The bars look like flat tinted pills and the text just vanishes behind them: the page is not captured, tell me and bars go solid.
-2. Screenshot it, light and dark.
+## Updates (the first thing to try)
+1. Settings, Updates, Check for updates. If a newer build exists it says "Update now, only X MB".
+2. Tap it. The first time Android sends you to a screen to allow Sheer to install updates. Allow it, come back, check again, tap, then confirm Android's prompt.
 
-## Engine
-3. Type `example.com`, then a search like `best pizza`. Both load. Progress line shows at the top while loading.
-4. Back, forward, reload, stop work. Back button on the phone goes back a page, then leaves the app.
-5. Open a link that opens a new window (target=_blank). It becomes a new tab.
-6. Tabs tab: new tab, close a tab, close the last tab (a fresh start page appears). Force-stop the app and reopen: tabs are back.
-7. Tap a web link in another app, choose Sheer. It opens in a new tab. (Settings, Default apps, Browser app, pick Sheer.)
+## Browsing
+3. Type `example.com`, then a search like `best pizza`. Back, forward, reload, stop work. A link that opens a new window becomes a new tab.
+4. Close the app completely and open it again: your tabs are back.
+5. History tab: pages you visited are listed, tap one to open it, the cross deletes one, "Clear history" asks twice.
+6. Tabs: "New private tab" keeps nothing: no history, no cookies, not restored. Android hides it from recents and screenshots.
 
-## Look and feel
-8. Switching tabs slides and fades like Aura Alarm. Keyboard opens over the address bar without hiding it.
-9. Settings: switch theme Match phone / Dark / Light. Bars and web pages follow. Toggle each privacy switch, they move smoothly.
+## Look
+7. Settings, Appearance: Bars at the top, Page scrolls under the bars, Frosted glass. Check the tab bar text and icons over a bright page and a dark page.
 
-## What the APK asks for (checked from the built file)
-GeckoView adds its own permissions on top of INTERNET. The real list is printed from `aapt dump badging` when a build is verified.
+## Privacy
+8. Settings, Clear browsing data: history, cookies and site data, cache, and the open site. Each asks for a second tap.
+9. Settings, About, Recent stops shows what stopped the app or a page and when.
 
 ## Known and unverified
-- Whether the glass blurs the live page (test 1).
-- Whether "Dangerous site warnings" works at all: it needs a Google key inside GeckoView, not confirmed.
-- No emulator test: the APK is arm64 only and the CI emulator is x86_64.
-- R8 keep rules for GeckoView are a guard, not proven.
+- Whether "Dangerous site warnings" works at all (it needs a Google key inside GeckoView).
+- The default-browser role, private tabs leaving nothing behind, and the update install prompt have not been seen on a phone.
+- No emulator test beyond start and open a link: the APK is arm64 only and the emulator is x86_64.

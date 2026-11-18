@@ -167,6 +167,10 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk smoke-bottom.apk
           # The top layout passed on the emulator already; to check it again, also build with -PtestTop=true into smoke-top.apk.
           ls -l smoke-bottom.apk
+          # A third build that starts with the page on a SurfaceView, to see on the emulator whether that mode shows the page.
+          ./gradlew assembleRelease --no-daemon -PtestAbi=x86_64 -PtestFast=true 2>&1 | tail -5
+          cp app/build/outputs/apk/release/app-release.apk smoke-fast.apk
+          ls -l smoke-fast.apk
 
       # Lets the emulator use the machine's hardware acceleration.
       - name: Enable KVM

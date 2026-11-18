@@ -86,7 +86,7 @@ fun SheerShell(browser: Browser, jump: Int) {
     var dialog by remember { mutableStateOf<Pair<String, String>?>(null) }
     val backdrop = rememberLayerBackdrop()
     // What the tab bar refracts: the same, but it draws nothing while a page scrolls and Calm glass is on.
-    val barBackdrop = rememberBackdrop(backdrop) { drawBackdrop -> if (!(UiPrefs.calmGlass && UiPrefs.scrolling)) drawBackdrop() }
+    val barBackdrop = rememberBackdrop(backdrop) { drawBackdrop -> if (!(UiPrefs.fastPage || (UiPrefs.calmGlass && UiPrefs.scrolling))) drawBackdrop() }
     val scene = rememberLayerBackdrop()
     // One "already animated" set per tab, wiped each time you arrive, so a tab greets you with its stagger every visit.
     val seenFor = remember { Array(TABS.size) { mutableSetOf<Any>() } }
@@ -210,6 +210,6 @@ fun SheerShell(browser: Browser, jump: Int) {
             }
         }
 
-        dialog?.let { (t, m) -> NoticeDialog(backdrop, t, m) { dialog = null } }
+        dialog?.let { (t, m) -> NoticeDialog(barBackdrop, t, m) { dialog = null } }
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -142,7 +143,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                         EmptyState(Ic.Alert, "This page crashed", "The engine stopped on this tab. Your other tabs are fine.", "Reload") { browser.recover(tab) }
                     }
                     tab.session == null -> StartPage(tab.incognito, contentTop, contentBottom, ::startEdit)
-                    else -> GeckoPage(browser, tab, Modifier.fillMaxSize().padding(top = pageTop, bottom = pageBottom))
+                    else -> key(UiPrefs.fastPage) { GeckoPage(browser, tab, Modifier.fillMaxSize().padding(top = pageTop, bottom = pageBottom)) }
                 }
             }
         }
@@ -261,7 +262,7 @@ private fun GeckoPage(browser: Browser, tab: BTab, modifier: Modifier) {
     AndroidView(
         factory = { c ->
             GeckoView(c).also {
-                it.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW)
+                it.setViewBackend(if (UiPrefs.fastPage) GeckoView.BACKEND_SURFACE_VIEW else GeckoView.BACKEND_TEXTURE_VIEW)
                 it.coverUntilFirstPaint(ink)
                 browser.view = it
             }

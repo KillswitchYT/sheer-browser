@@ -3,6 +3,7 @@ package com.killswitch.sheer
 import android.app.Activity
 import android.os.Handler
 import android.os.HandlerThread
+import android.view.Display
 import android.view.FrameMetrics
 import android.view.Window
 import java.util.Locale
@@ -21,12 +22,14 @@ object FrameMeter {
     private var budgetMs = 1000.0 / 60.0
     private var attached: Window? = null
     private var thread: HandlerThread? = null
+    private var display: Display? = null
 
     private val listener = Window.OnFrameMetricsAvailableListener { _, m, _ ->
         // The very first frame builds the whole screen and always looks slow, so it is not counted.
         if (m.getMetric(FrameMetrics.FIRST_DRAW_FRAME) != 1L) {
             val ms = m.getMetric(FrameMetrics.TOTAL_DURATION) / 1_000_000.0
             synchronized(lock) {
+                if (frames % 30 == 0) display?.refreshRate?.let { if (it >= 30f) budgetMs = 1000.0 / it }
                 frames++
                 totalMs += ms
                 if (ms > worstMs) worstMs = ms
@@ -42,7 +45,9 @@ object FrameMeter {
         val t = HandlerThread("sheer-frames").also { it.start() }
         thread = t
         @Suppress("DEPRECATION")
-        val hz = a.windowManager.defaultDisplay.refreshRate
+        val d = a.windowManager.defaultDisplay
+        display = d
+        val hz = d.refreshRate
         synchronized(lock) { budgetMs = 1000.0 / (if (hz >= 30f) hz else 60f) }
         a.window.addOnFrameMetricsAvailableListener(listener, Handler(t.looper))
         attached = a.window
@@ -57,6 +62,7 @@ object FrameMeter {
 
     fun reset() = synchronized(lock) {
         frames = 0; slow = 0; veryslow = 0; worstMs = 0.0; totalMs = 0.0
+        display?.refreshRate?.let { if (it >= 30f) budgetMs = 1000.0 / it }
     }
 
     fun report(): String = synchronized(lock) {
@@ -65,9 +71,9 @@ object FrameMeter {
         } else {
             String.format(
                 Locale.US,
-                "%d frames counted.\n\nAverage: %.1f ms\nWorst: %.0f ms\nSlower than one screen refresh (%.1f ms): %d%%\nSlower than two refreshes: %d%%\n\n" +
+                "%d frames counted at %.0f Hz.\n\nAverage: %.1f ms\nWorst: %.0f ms\nSlower than one screen refresh (%.1f ms): %d%%\nSlower than two refreshes: %d%%\n\n" +
                     "Lower is smoother. This counts Sheer's own drawing (bars, glass, page texture), not the work the engine does inside a page.",
-                frames, totalMs / frames, worstMs, budgetMs, slow * 100 / frames, veryslow * 100 / frames,
+                frames, 1000.0 / budgetMs, totalMs / frames, worstMs, budgetMs, slow * 100 / frames, veryslow * 100 / frames,
             )
         }
     }

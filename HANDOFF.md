@@ -36,7 +36,7 @@ The user builds nothing locally. Everything compiles on GitHub Actions and is dr
   (`compileSdk { version = release(37) { minorApiLevel = 2 } }`), because GeckoView 160 refuses anything older. The R8 release is the app.
 - Never touch the user's other repos (bulletproof-alarm, Mini-Compressor, MiniCompressor, cool-keyboard, idk). aura-alarm is read-only reference.
 
-## 4. What exists (v0.1.17)
+## 4. What exists (v0.1.18)
 Tabs: Browse, Tabs, History, Settings (glass bottom tab bar, Kyant animation kept).
 - **Browse**: GeckoView page (TextureView backend, so glass can see it) with a glass address bar, back, forward, reload/stop, progress line,
   start page, crash page. Tab restore after restart (saved a moment after every change). New-window links open new tabs. Links from other apps
@@ -44,7 +44,7 @@ Tabs: Browse, Tabs, History, Settings (glass bottom tab bar, Kyant animation kep
 - **Tabs**: list, new tab, close, New private tab, Close all private tabs.
 - **Private tabs**: GeckoView private mode, no history delegate, never saved, FLAG_SECURE while showing (blocks screenshots).
 - **History**: own SQLite store (`History.kt`) fed by GeckoSession.HistoryDelegate (normal tabs only), search, grouped by day, delete one, clear (two taps), visited-link colouring.
-- **Settings**: Appearance (theme, "Bars at the top", "Page scrolls under the bars" default on, "Frosted glass" default off, "Calm glass while scrolling" default on), Search (Google default,
+- **Settings**: Appearance (theme, "Bars at the top", "Page scrolls under the bars" default on, "Frosted glass" default off, Settings > Performance: "Skip hidden background" default on, "Calm glass while scrolling" default off, "Test: hide the bars while scrolling" default off, "Test: run at 60 Hz" default off), Search (Google default,
   DuckDuckGo, Brave Search, Startpage), Privacy (strict tracking protection, HTTPS only, dangerous site warnings), Clear browsing data (history,
   cookies and site data, cache, current site; two taps), Updates, About (version, engine, Recent stops, Smoothness frame meter + reset).
 - **Updater** (`Updater.kt`, `Patch.kt`): opt-in "Check for updates" reads `update.json` from the GitHub release `latest`, downloads a ~2.4 MB patch
@@ -56,7 +56,7 @@ Tabs: Browse, Tabs, History, Settings (glass bottom tab bar, Kyant animation kep
   remote debugging and about:config off, safe browsing toggle. Telemetry/remote settings NOT yet audited.
 - Permissions in the built APK: INTERNET, REQUEST_INSTALL_PACKAGES (ours); ACCESS_NETWORK_STATE, WAKE_LOCK, MODIFY_AUDIO_SETTINGS (GeckoView's).
 
-Prefs keys (SharedPreferences "sheer"): th, se2 (engine index, Google = 0), https, etc, sb, top (bars at top), under (page under bars), frost2, calm (calm glass), tabs (json), exit_seen.
+Prefs keys (SharedPreferences "sheer"): th, se2 (engine index, Google = 0), https, etc, sb, top (bars at top), under (page under bars), frost2, calm (calm glass, default 0), skiphid (default 1), testhide, cap60, tabs (json), exit_seen.
 
 ## 5. Code map (`app/src/main/java/com/killswitch/sheer/`)
 - `MainActivity`, `SheerApp` (Application, holds `Browser`, installs CrashLog), `Browser.kt` (BTab/Browser: sessions, delegates, restore/save, recovery, private tabs).
@@ -70,6 +70,8 @@ Prefs keys (SharedPreferences "sheer"): th, se2 (engine index, Google = 0), http
   `baseline-prof.txt` (our code + Kyant) plus `androidx.profileinstaller` (library profiles were already merged by AGP but a sideloaded app never installs them without ProfileInstaller);
   the loading bar reads its animated progress only in a `drawBehind`, so a page load no longer recomposes the whole Browse screen every frame;
   "Calm glass while scrolling": `GeckoSession.ScrollDelegate` -> `ScrollWatch.moved()` -> `UiPrefs.scrolling` (off 250 ms after the last report); the bars refract `rememberBackdrop(live) { if (!(calm && scrolling)) drawBackdrop() }`, which only reads the state while drawing, so nothing recomposes.
+  v0.1.18: every experiment is a toggle in Settings > Performance. "Skip hidden background" does not paint the aura gradient (BrowseTab and the shell's scene layer) while a real page fills the screen (`UiPrefs.browseCovers`, set from BrowseTab). "Test: hide the bars while scrolling" fades the address bar row and tab bar to alpha 0 while `UiPrefs.scrolling` (decides whether glass costs anything at all). "Test: run at 60 Hz" sets `preferredRefreshRate` (Samsung's High motion smoothness may ignore it; the Smoothness report now prints the Hz it ran at).
+  Researched and NOT built: a shared glass capture (Glasmio's 6 to 17% RenderThread saving came from merging glass pieces into one surface on a heavy page tree; ours is a light tree and the lens only does rounded rects), fusing vibrancy into the lens (needs library internals, ntvien/AndroidLiquidGlass branch perf/vibrancy-in-lens), PixelCopy hybrid (keeps refraction on a SurfaceView but lags the page). The user wants refraction kept: do NOT drop it without being told.
   R8 was already on (`isMinifyEnabled = true`), it does not affect scrolling. Not done on purpose (it removes the live-glass look): SurfaceView page backend. Next lever if scrolling is still bad: a "Fast page" mode (SurfaceView, glass over the static scene).
 - IMPORTANT: glass bars must never sample the layer they are drawn inside. The Browse page has its own `layerBackdrop` and the bars are drawn OUTSIDE it.
   Doing it wrong crashed the app instantly (native stack overflow in the render thread).

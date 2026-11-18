@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -123,6 +125,8 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     BackHandler(enabled = active && !editing && tab?.canBack == true) { browser.back() }
 
     val loading = tab?.loading == true
+    val covers = UiPrefs.skipHidden && under && tab != null && !tab.crashed && tab.session != null
+    SideEffect { UiPrefs.browseCovers = covers }
     // Kept as a State and only read while drawing: reading it here would recompose the whole screen on every frame of a page load.
     val progress = animateFloatAsState(
         if (loading) (tab?.progress ?: 0) / 100f else 0f, tween(180), label = "progress",
@@ -130,7 +134,8 @@ fun BrowseTab(browser: Browser, active: Boolean) {
 
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().layerBackdrop(live)) {
-            Canvas(Modifier.fillMaxSize()) { drawAuraScene() }
+            // A page that fills the screen hides the background completely, so painting it again for every page frame is wasted work.
+            Canvas(Modifier.fillMaxSize()) { if (!covers) drawAuraScene() }
             if (tab != null) {
                 when {
                     tab.crashed -> Box(Modifier.fillMaxSize().padding(top = contentTop).padding(horizontal = 16.dp)) {
@@ -152,7 +157,12 @@ fun BrowseTab(browser: Browser, active: Boolean) {
         Row(
             (if (top) Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 80.dp)
             else Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().imePadding()
-                .padding(start = 16.dp, end = 16.dp, bottom = if (editing) 8.dp else 96.dp)),
+                .padding(start = 16.dp, end = 16.dp, bottom = if (editing) 8.dp else 96.dp))
+                .graphicsLayer {
+                    // Test switch: the bars vanish while the page scrolls, to see whether the glass costs anything.
+                    alpha = if (UiPrefs.testHide && UiPrefs.scrolling) 0f else 1f
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {

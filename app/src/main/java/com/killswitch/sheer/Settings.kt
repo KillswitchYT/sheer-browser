@@ -37,7 +37,16 @@ object Settings {
     fun frosted(c: Context) = int(c, "frost2", 0) == 1
 
     /** While a page scrolls, the bars skip bending it (smoother). On until the person turns it off. */
-    fun calmGlass(c: Context) = int(c, "calm", 1) == 1
+    fun calmGlass(c: Context) = int(c, "calm", 0) == 1
+
+    /** Do not paint the glass background where the page covers the whole screen. No visible change, less for the GPU. On by default. */
+    fun skipHidden(c: Context) = int(c, "skiphid", 1) == 1
+
+    /** Test: hide the bars while a page scrolls, to see whether the glass costs anything at all. Off by default. */
+    fun testHide(c: Context) = int(c, "testhide", 0) == 1
+
+    /** Test: ask Android to run Sheer at 60 Hz. Off by default. */
+    fun cap60(c: Context) = int(c, "cap60", 0) == 1
 
     fun flag(c: Context, k: String, on: Boolean) = setInt(c, k, if (on) 1 else 0)
 }

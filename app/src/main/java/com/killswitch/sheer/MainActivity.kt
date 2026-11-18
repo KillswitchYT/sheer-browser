@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.toArgb
 import com.killswitch.sheer.ui.Aura
 import com.killswitch.sheer.ui.SheerShell
 import com.killswitch.sheer.ui.UiPrefs
+import com.killswitch.sheer.ui.applyRefreshCap
 
 class MainActivity : ComponentActivity() {
     private val jump = mutableIntStateOf(0)
@@ -45,6 +46,10 @@ class MainActivity : ComponentActivity() {
         UiPrefs.pageUnder = Settings.pageUnder(this)
         UiPrefs.frosted = Settings.frosted(this)
         UiPrefs.calmGlass = Settings.calmGlass(this)
+        UiPrefs.skipHidden = Settings.skipHidden(this)
+        UiPrefs.testHide = Settings.testHide(this)
+        UiPrefs.cap60 = Settings.cap60(this)
+        applyRefreshCap(this, UiPrefs.cap60)
         // The theme is one shared object, so every Activity applies the saved choice itself before drawing anything.
         Aura.apply(Settings.theme(this), (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
         val bars = if (Aura.isDark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)

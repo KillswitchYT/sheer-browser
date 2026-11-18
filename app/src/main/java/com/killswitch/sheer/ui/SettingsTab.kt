@@ -206,6 +206,9 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
     var under by remember { mutableStateOf(UiPrefs.pageUnder) }
     var frosted by remember { mutableStateOf(UiPrefs.frosted) }
     var calm by remember { mutableStateOf(UiPrefs.calmGlass) }
+    var skipHid by remember { mutableStateOf(UiPrefs.skipHidden) }
+    var testHide by remember { mutableStateOf(UiPrefs.testHide) }
+    var cap60 by remember { mutableStateOf(UiPrefs.cap60) }
     val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?" }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -230,14 +233,29 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                 ToggleRow("Page scrolls under the bars", "The glass blurs the page. The end of a page can hide behind the bars.", under, false) {
                     under = it; Settings.flag(ctx, "under", it); UiPrefs.pageUnder = it
                 }
-                ToggleRow("Calm glass while scrolling", "While a page moves, the bars skip bending it and bring it back when it rests. Smoother scrolling.", calm, false) {
+            }
+        }
+
+        item {
+            Section(2, seen, "Performance", "Switches for finding what makes scrolling heavy. Then Smoothness in About shows the result.") {
+                ToggleRow("Skip hidden background", "Does not paint the glass background where a page already covers the whole screen. Nothing changes on screen.", skipHid, true) {
+                    skipHid = it; Settings.flag(ctx, "skiphid", it); UiPrefs.skipHidden = it
+                }
+                ToggleRow("Calm glass while scrolling", "While a page moves, the bars stop bending it and bring the bend back when it rests.", calm, false) {
                     calm = it; Settings.flag(ctx, "calm", it); UiPrefs.calmGlass = it
+                }
+                ToggleRow("Test: hide the bars while scrolling", "The bars disappear while a page moves. Only to see whether the glass costs anything.", testHide, false) {
+                    testHide = it; Settings.flag(ctx, "testhide", it); UiPrefs.testHide = it
+                }
+                ToggleRow("Test: run at 60 Hz", "Asks Android for 60 Hz. Some phones ignore it, Smoothness shows what ran.", cap60, false) {
+                    cap60 = it; Settings.flag(ctx, "cap60", it); UiPrefs.cap60 = it
+                    (ctx as? android.app.Activity)?.let { a -> applyRefreshCap(a, it) }
                 }
             }
         }
 
         item {
-            Section(2, seen, "Search", "What the address bar uses for anything that is not a web address.") {
+            Section(3, seen, "Search", "What the address bar uses for anything that is not a web address.") {
                 UrlInput.ENGINES.forEachIndexed { i, e ->
                     Choice(e.name, if (e.name == "Google") "Google can log what you search." else null, engine == i, i == 0) {
                         engine = i; Settings.setEngine(ctx, i)
@@ -247,7 +265,7 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
         }
 
         item {
-            Section(3, seen, "Privacy", "Applied to every page, right away.") {
+            Section(4, seen, "Privacy", "Applied to every page, right away.") {
                 ToggleRow("Strict tracking protection", "Blocks trackers, fingerprinting and crypto miners.", strict, true) {
                     strict = it; Settings.flag(ctx, "etp", it); Gecko.applyTracking(ctx)
                 }
@@ -261,7 +279,7 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
         }
 
         item {
-            Section(4, seen, "Clear browsing data", "History is in the History tab. Cookies can be removed here but not listed.") {
+            Section(5, seen, "Clear browsing data", "History is in the History tab. Cookies can be removed here but not listed.") {
                 val gc = { Gecko.runtime(ctx).storageController }
                 ClearRow("Clear history", "Every page in the History tab.", true) { History.clear(ctx) }
                 ClearRow("Clear cookies and site data", "Logs you out of sites and removes what they stored.", false) {
@@ -280,11 +298,11 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
         }
 
         item {
-            Section(5, seen, "Updates", "Only when you tap. GitHub can see your IP address while it checks.") { UpdateRows() }
+            Section(6, seen, "Updates", "Only when you tap. GitHub can see your IP address while it checks.") { UpdateRows() }
         }
 
         item {
-            Section(6, seen, "About", "Sheer is the Firefox engine in a new coat.") {
+            Section(7, seen, "About", "Sheer is the Firefox engine in a new coat.") {
                 ValueRow("Version", version, true)
                 ValueRow("Engine", "Gecko", false)
                 LinkRow(Ic.Alert, "Recent stops", false) { onNotice("Recent stops", CrashLog.recent(ctx)) }

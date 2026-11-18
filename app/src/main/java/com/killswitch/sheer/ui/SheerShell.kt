@@ -153,7 +153,7 @@ fun SheerShell(browser: Browser, jump: Int) {
         // Everything inside this box is what the glass refracts.
         Box(Modifier.layerBackdrop(backdrop).fillMaxSize()) {
             // The scene on its own, so controls inside a page refract the real background.
-            Box(Modifier.layerBackdrop(scene).fillMaxSize()) { Canvas(Modifier.fillMaxSize()) { drawAuraScene() } }
+            Box(Modifier.layerBackdrop(scene).fillMaxSize()) { Canvas(Modifier.fillMaxSize()) { if (!(UiPrefs.browseCovers && shown == 0 && leaving == -1)) drawAuraScene() } }
             CompositionLocalProvider(LocalScene provides scene) {
                 for (i in TABS.indices) if (i in mounted) key(i) {
                     val isShown = i == shown
@@ -189,8 +189,12 @@ fun SheerShell(browser: Browser, jump: Int) {
 
         LiquidBottomTabs(
             selectedTabIndex = { tab }, onTabSelected = { switchTo(it) }, backdrop = barBackdrop, tabsCount = TABS.size,
-            modifier = if (barsTop) Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp)
-            else Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = (if (barsTop) Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp)
+            else Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp))
+                .graphicsLayer {
+                    alpha = if (UiPrefs.testHide && UiPrefs.scrolling) 0f else 1f
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                },
         ) {
             TABS.forEachIndexed { i, t ->
                 LiquidBottomTab({ switchTo(i) }) {

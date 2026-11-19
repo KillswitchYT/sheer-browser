@@ -310,6 +310,7 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                 ValueRow("Version", version, true)
                 ValueRow("Engine", "Gecko", false)
                 LinkRow(Ic.Alert, "Recent stops", false) { onNotice("Recent stops", CrashLog.recent(ctx)) }
+                LinkRow(Ic.Info, "Compiled code", false) { onNotice("Compiled code", FrameMeter.compiledReport(ctx)) }
                 LinkRow(Ic.Clock, "Smoothness", false) { onNotice("Smoothness", FrameMeter.report()) }
                 LinkRow(Ic.Reload, "Reset smoothness counter", false) {
                     FrameMeter.reset()

@@ -188,7 +188,7 @@ jobs:
           profile: pixel_6
           ram-size: 4096M
           disable-animations: true
-          script: timeout 1500 bash tools/ci/smoke-all.sh
+          script: timeout 2700 bash tools/ci/smoke-all.sh
 
       - name: Show the result on the run page
         if: always()

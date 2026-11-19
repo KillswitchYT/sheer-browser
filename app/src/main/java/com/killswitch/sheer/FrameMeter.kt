@@ -1,12 +1,14 @@
 package com.killswitch.sheer
 
 import android.app.Activity
+import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.view.Display
 import android.view.FrameMetrics
 import android.view.Window
+import java.io.File
 import java.util.Locale
 
 /**
@@ -92,5 +94,24 @@ object FrameMeter {
                 uiMs / n, handMs / n, swapMs / n, gpuMs / n,
             )
         }
+    }
+
+    /** What Android has compiled for Sheer so far. Every update throws it away, and the phone only redoes it while idle and charging. */
+    fun compiledReport(c: Context): String {
+        val info = c.packageManager.getPackageInfo(c.packageName, 0)
+        val minutes = (System.currentTimeMillis() - info.lastUpdateTime) / 60000
+        val age = if (minutes < 120) "$minutes minutes ago" else "${minutes / 60} hours ago"
+        val oat = File(File(c.applicationInfo.sourceDir).parentFile, "oat")
+        val files = runCatching { oat.walkTopDown().filter { it.isFile }.toList() }.getOrDefault(emptyList())
+        fun mb(b: Long) = String.format(Locale.US, "%.1f MB", b / 1048576.0)
+        val odex = files.filter { it.name.endsWith(".odex") }.sumOf { it.length() }
+        val vdex = files.filter { it.name.endsWith(".vdex") }.sumOf { it.length() }
+        val verdict = when {
+            files.isEmpty() -> "Could not read the compiled code on this phone."
+            odex < 1_000_000L -> "Nothing is compiled. Sheer's own code runs interpreted and is compiled on the fly while you use it, which is slow."
+            else -> "Compiled code is in place."
+        }
+        return "Installed $age.\n\nCompiled code: ${mb(odex)}\nChecked code: ${mb(vdex)}\n\n$verdict\n\n" +
+            "Every update starts again from nothing. Android compiles the app while the phone is idle and charging."
     }
 }

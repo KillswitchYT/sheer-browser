@@ -7,6 +7,8 @@ b=0
 if [ -f smoke-top.apk ]; then bash tools/ci/smoke-test.sh smoke-top.apk "$PKG" top layout; b=$?; fi
 c=0
 if [ -f smoke-fast.apk ]; then bash tools/ci/smoke-test.sh smoke-fast.apk "$PKG" fast layout; c=$?; fi
+# Then the compile experiment: does Android having compiled Sheer's code (or not) change how it starts and scrolls?
+if [ -f smoke-bottom.apk ]; then bash tools/ci/compile-test.sh smoke-bottom.apk "$PKG" || true; fi
 echo "bottom=$a top=$b fast=$c"
 # The SurfaceView mode is a test switch: it is looked at, it does not decide whether the build is good.
 [ "$a" = 0 ] && [ "$b" = 0 ]

@@ -8,7 +8,7 @@
 # HONEST LIMITS: an emulator with software graphics is not a Samsung. It shows the CPU side (code speed), not the GPU side.
 set -u
 APK="${1:?need the apk path}"; PKG="${2:?need the package name}"
-LOG="smoke-compile-test.log"; : > "$LOG"
+LOG="smoke-test-compile.log"; : > "$LOG"
 exec > >(tee -a "$LOG") 2>&1
 adbx() { adb shell "$@" 2>&1 | tr -d '\r'; }
 adb root > /dev/null 2>&1; sleep 3

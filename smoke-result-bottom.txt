@@ -1,0 +1,4 @@
+[bottom] INSTALL: PASS
+[bottom] START: PASS the app was still running after 25 s
+[bottom] LINK: PASS the app was still running after 25 s
+[bottom] OVERALL: PASS (on an x86_64 emulator, not on a phone)

@@ -1,0 +1,42 @@
+Success
+
+=== alert
+   screenshot smoke-feat-alert-1.png
+   NO node with the text "OK"
+   screenshot smoke-feat-alert-2.png
+
+=== confirm
+   screenshot smoke-feat-confirm-1.png
+   NO node with the text "OK"
+   screenshot smoke-feat-confirm-2.png
+
+=== prompt
+   screenshot smoke-feat-prompt-1.png
+   NO node with the text "OK"
+   screenshot smoke-feat-prompt-2.png
+
+=== select
+   screenshot smoke-feat-select-1.png
+   NO node with the text "Banana"
+   screenshot smoke-feat-select-2.png
+
+=== geo
+   screenshot smoke-feat-geo-1.png
+   tap "Allow" at 749 1296
+   screenshot smoke-feat-geo-2.png
+
+=== media
+   screenshot smoke-feat-media-1.png
+   tap "Allow" at 749 1296
+   screenshot smoke-feat-media-2.png
+
+=== popup
+   screenshot smoke-feat-popup-1.png
+   tap "Allow" at 749 1321
+   screenshot smoke-feat-popup-2.png
+
+=== file
+   screenshot smoke-feat-file-1.png
+   screenshot smoke-feat-file-2.png
+
+feature test finished

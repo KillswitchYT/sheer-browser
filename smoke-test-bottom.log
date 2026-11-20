@@ -1,0 +1,10 @@
+[10:30:17] [bottom] emulator: x86_64 android 14 api 34
+Performing Streamed Install
+Success
+[bottom] INSTALL: PASS
+[10:30:30] cold start
+[bottom] START: PASS the app was still running after 25 s
+[10:31:02] open a web link, the way another app would
+[bottom] LINK: PASS the app was still running after 25 s
+[10:31:29] full log for later reading
+[bottom] OVERALL: PASS (on an x86_64 emulator, not on a phone)

@@ -93,7 +93,6 @@ class MainActivity : ComponentActivity() {
         UiPrefs.skipHidden = Settings.skipHidden(this)
         UiPrefs.testHide = Settings.testHide(this)
         UiPrefs.cap60 = Settings.cap60(this)
-        UiPrefs.fastPage = Settings.fastPage(this)
         applyRefreshCap(this, UiPrefs.cap60)
         // The theme is one shared object, so every Activity applies the saved choice itself before drawing anything.
         Aura.apply(Settings.theme(this), (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)

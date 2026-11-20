@@ -53,12 +53,6 @@ log "open a web link, the way another app would"
 view "https://example.com"
 step "LINK" 25 || { shot 2; exit 1; }
 shot 2
-if [ "$TAG" = "fast" ]; then
-  # The SurfaceView mode: look again a few seconds later, and ask Android where it put the page's surface.
-  sleep 8; shot 2b
-  log "surfaces of $PKG"; adbx dumpsys SurfaceFlinger --list | grep -i "$PKG"
-  adbx dumpsys SurfaceFlinger | grep -iE -A16 "SurfaceView\\[$PKG" | head -90
-fi
 
 if [ "$MODE" != "quick" ]; then
   log "a very long page: top, then scroll to the end"

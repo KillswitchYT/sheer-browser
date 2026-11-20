@@ -31,7 +31,6 @@ object UiPrefs {
     var testHide by mutableStateOf(false)
 
     /** Test: the page on a SurfaceView, which the engine draws to faster but the glass cannot see. */
-    var fastPage by mutableStateOf(false)
 
     /** Test: ask Android to run Sheer at 60 Hz. */
     var cap60 by mutableStateOf(false)

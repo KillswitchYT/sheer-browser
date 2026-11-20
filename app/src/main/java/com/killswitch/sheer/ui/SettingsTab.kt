@@ -209,7 +209,6 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
     var skipHid by remember { mutableStateOf(UiPrefs.skipHidden) }
     var testHide by remember { mutableStateOf(UiPrefs.testHide) }
     var cap60 by remember { mutableStateOf(UiPrefs.cap60) }
-    var fastPage by remember { mutableStateOf(UiPrefs.fastPage) }
     val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?" }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -247,9 +246,6 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                 }
                 ToggleRow("Test: hide the bars while scrolling", "The bars disappear while a page moves. Only to see whether the glass costs anything.", testHide, false) {
                     testHide = it; Settings.flag(ctx, "testhide", it); UiPrefs.testHide = it
-                }
-                ToggleRow("Test: page on a SurfaceView", "The engine draws faster, but the bars cannot bend the page. If the page goes blank, turn it off.", fastPage, false) {
-                    fastPage = it; Settings.flag(ctx, "fastpage", it); UiPrefs.fastPage = it
                 }
                 ToggleRow("Test: run at 60 Hz", "Asks Android for 60 Hz. Some phones ignore it, Smoothness shows what ran.", cap60, false) {
                     cap60 = it; Settings.flag(ctx, "cap60", it); UiPrefs.cap60 = it

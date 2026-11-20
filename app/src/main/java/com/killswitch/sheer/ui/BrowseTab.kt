@@ -84,7 +84,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     // What the glass bars refract: the scene and the page together. The bars are drawn OUTSIDE this layer, never inside it.
     val live = rememberLayerBackdrop()
     // The bars refract this one. While the page scrolls and Calm glass is on, it draws nothing, so the bars do not replay the page every frame.
-    val backdrop = rememberBackdrop(live) { drawBackdrop -> if (!(UiPrefs.fastPage || (UiPrefs.calmGlass && UiPrefs.scrolling))) drawBackdrop() }
+    val backdrop = rememberBackdrop(live) { drawBackdrop -> if (!(UiPrefs.calmGlass && UiPrefs.scrolling)) drawBackdrop() }
 
     // The tab bar is always at the bottom (88 dp with its padding); the address row (48 dp plus a gap each side) is at the bottom or the
     // top, as chosen in Settings. The page never starts under the top bars. At the bottom it either runs under the glass (the default look,
@@ -143,7 +143,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                         EmptyState(Ic.Alert, "This page crashed", "The engine stopped on this tab. Your other tabs are fine.", "Reload") { browser.recover(tab) }
                     }
                     tab.session == null -> StartPage(tab.incognito, contentTop, contentBottom, ::startEdit)
-                    else -> key(UiPrefs.fastPage) { GeckoPage(browser, tab, Modifier.fillMaxSize().padding(top = pageTop, bottom = pageBottom)) }
+                    else -> GeckoPage(browser, tab, Modifier.fillMaxSize().padding(top = pageTop, bottom = pageBottom))
                 }
             }
         }
@@ -262,7 +262,7 @@ private fun GeckoPage(browser: Browser, tab: BTab, modifier: Modifier) {
     AndroidView(
         factory = { c ->
             GeckoView(c).also {
-                it.setViewBackend(if (UiPrefs.fastPage) GeckoView.BACKEND_SURFACE_VIEW else GeckoView.BACKEND_TEXTURE_VIEW)
+                it.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW)
                 it.coverUntilFirstPaint(ink)
                 browser.view = it
             }

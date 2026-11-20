@@ -30,8 +30,6 @@ android {
         manifestPlaceholders["appLabel"] = "Sheer"
         // Only CI's second emulator run changes this (-PtestTop=true), to check the layout with the address bar at the top.
         resValue("bool", "default_address_top", (findProperty("testTop") as String?) ?: "false")
-        // Same for the SurfaceView page test (-PtestFast=true), so CI can look at that mode on an emulator.
-        resValue("bool", "default_fast_page", (findProperty("testFast") as String?) ?: "false")
         // The Galaxy A52 is 64-bit ARM. One engine build keeps the APK smaller.
         ndk { abiFilters += abi }
     }

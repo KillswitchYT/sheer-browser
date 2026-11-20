@@ -46,7 +46,6 @@ object Settings {
     fun testHide(c: Context) = int(c, "testhide", 0) == 1
 
     /** Test: draw the page on a SurfaceView instead of a TextureView. The bars then cannot bend it. Off by default. */
-    fun fastPage(c: Context) = int(c, "fastpage", if (c.resources.getBoolean(R.bool.default_fast_page)) 1 else 0) == 1
 
     /** Test: ask Android to run Sheer at 60 Hz. Off by default. */
     fun cap60(c: Context) = int(c, "cap60", 0) == 1

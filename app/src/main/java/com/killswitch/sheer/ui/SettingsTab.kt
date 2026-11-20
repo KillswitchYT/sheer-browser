@@ -322,7 +322,8 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                     onNotice(
                         "Nothing",
                         "Sheer has no account, no analytics, no ads and no server of its own. The sites you open see your connection, " +
-                            "and the Firefox engine inside also talks to Mozilla for some services. The full list is still being checked.",
+                            "and the Firefox engine inside also talks to Mozilla for some services. The full list is still being checked. " +
+                            "Camera, microphone and location are only used when a site asks and you tap Allow.",
                     )
                 }
             }

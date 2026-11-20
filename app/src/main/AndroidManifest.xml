@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Only this one is ours. GeckoView adds a few of its own (network state, wake lock, audio settings), see TESTING.md. -->
+    <!-- GeckoView adds a few of its own (network state, wake lock, audio settings), see TESTING.md. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Lets the Updates screen hand a new version of Sheer to Android's installer. Android still asks the person to confirm. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- Asked from Android only at the moment a site wants them, never at start. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
+    <uses-feature android:name="android.hardware.location" android:required="false"/>
 
     <application
         android:name=".SheerApp"

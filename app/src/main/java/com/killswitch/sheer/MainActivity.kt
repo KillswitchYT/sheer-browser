@@ -1,13 +1,17 @@
 package com.killswitch.sheer
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.graphics.toArgb
 import com.killswitch.sheer.ui.Aura
 import com.killswitch.sheer.ui.SheerShell
@@ -17,6 +21,46 @@ import com.killswitch.sheer.ui.applyRefreshCap
 class MainActivity : ComponentActivity() {
     private val jump = mutableIntStateOf(0)
     private val browser: Browser get() = (application as SheerApp).browser
+
+    // A page's file field: the system picker, then the answer goes back to the page.
+    private var pickCb: ((List<Uri>) -> Unit)? = null
+    private val pickLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+        val cb = pickCb
+        pickCb = null
+        val out = ArrayList<Uri>()
+        val data = res.data
+        if (res.resultCode == RESULT_OK && data != null) {
+            data.data?.let { out.add(it) }
+            data.clipData?.let { clip -> for (i in 0 until clip.itemCount) clip.getItemAt(i).uri?.let { out.add(it) } }
+        }
+        cb?.invoke(out.distinct())
+    }
+
+    // Camera, microphone and location are asked from Android only when a site actually wants them.
+    private var permCb: ((Boolean) -> Unit)? = null
+    private val permLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        val cb = permCb
+        permCb = null
+        cb?.invoke(grants.isNotEmpty() && grants.values.all { it })
+    }
+
+    private fun hookPageRequests() {
+        browser.filePicker = { types, multiple, cb ->
+            val mimes = types.filter { it.isNotBlank() }
+            val i = Intent(Intent.ACTION_GET_CONTENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = if (mimes.size == 1) mimes[0] else "*/*"
+                if (mimes.size > 1) putExtra(Intent.EXTRA_MIME_TYPES, mimes.toTypedArray())
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple)
+            }
+            pickCb = cb
+            try { pickLauncher.launch(i) } catch (e: Exception) { pickCb = null; cb(emptyList()) }
+        }
+        browser.askAndroid = { perms, cb ->
+            val missing = perms.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+            if (missing.isEmpty()) cb(true) else { permCb = cb; permLauncher.launch(missing.toTypedArray()) }
+        }
+    }
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
@@ -58,6 +102,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
         window.decorView.setBackgroundColor(Aura.Ink.toArgb())
         Gecko.runtime(this)
+        hookPageRequests()
         if (b == null) open(intent) // a re-created activity still holds the old intent, do not open the link twice
         setContent { SheerShell(browser, jump.intValue) }
     }

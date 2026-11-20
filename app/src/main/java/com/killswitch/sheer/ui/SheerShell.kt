@@ -211,5 +211,6 @@ fun SheerShell(browser: Browser, jump: Int) {
         }
 
         dialog?.let { (t, m) -> NoticeDialog(barBackdrop, t, m) { dialog = null } }
+        PageAsks.current?.let { ask -> key(ask) { AskDialog(barBackdrop, ask) } }
     }
 }

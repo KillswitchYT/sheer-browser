@@ -48,6 +48,12 @@ class Browser(private val app: Context) {
 
     val current: BTab? get() = tabs.firstOrNull { it.id == selectedId }
 
+    /** Set by the activity: opens the system file picker for a page's file field (types, several allowed, what to do with the result). */
+    var filePicker: ((Array<String>, Boolean, (List<android.net.Uri>) -> Unit) -> Unit)? = null
+
+    /** Set by the activity: asks Android for runtime permissions (camera, microphone, location) and says whether they were all given. */
+    var askAndroid: ((List<String>, (Boolean) -> Unit) -> Unit)? = null
+
     private val main = Handler(Looper.getMainLooper())
 
     init {
@@ -139,6 +145,8 @@ class Browser(private val app: Context) {
         s.progressDelegate = null
         s.contentDelegate = null
         s.scrollDelegate = null
+        s.promptDelegate = null
+        s.permissionDelegate = null
         s.historyDelegate = null
         s.close()
         t.session = null
@@ -213,6 +221,8 @@ class Browser(private val app: Context) {
     }
 
     private fun attach(t: BTab, s: GeckoSession) {
+        s.promptDelegate = PagePrompts(app, this, t)
+        s.permissionDelegate = PagePermissions(this, t)
         // Tells the glass bars that the page is moving, so they can go easy on the GPU until it rests.
         s.scrollDelegate = object : GeckoSession.ScrollDelegate {
             override fun onScrollChanged(session: GeckoSession, scrollX: Int, scrollY: Int) {

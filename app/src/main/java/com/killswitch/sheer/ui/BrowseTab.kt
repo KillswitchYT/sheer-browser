@@ -51,6 +51,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -60,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.killswitch.sheer.BTab
 import com.killswitch.sheer.Browser
+import com.killswitch.sheer.PageActions
 import com.killswitch.sheer.UrlInput
 import com.killswitch.sheer.glass.LiquidButton
 import com.killswitch.sheer.glass.LiquidField
@@ -67,6 +70,9 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import kotlinx.coroutines.delay
+import org.mozilla.geckoview.GeckoResult
+import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
 /**
@@ -81,6 +87,11 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     val tab = browser.current
     var editing by remember { mutableStateOf(false) }
     var field by remember { mutableStateOf(TextFieldValue("")) }
+    // Find in page: the bar takes the place of the address bar while it is open.
+    var finding by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var found by remember { mutableStateOf<GeckoSession.FinderResult?>(null) }
+    val findFocus = remember { FocusRequester() }
     // What the glass bars refract: the scene and the page together. The bars are drawn OUTSIDE this layer, never inside it.
     val live = rememberLayerBackdrop()
     // The bars refract this one. While the page scrolls and Calm glass is on, it draws nothing, so the bars do not replay the page every frame.
@@ -109,6 +120,19 @@ fun BrowseTab(browser: Browser, active: Boolean) {
         editing = true
     }
     fun submit() { browser.go(field.text); leaveEdit() }
+    fun closeFind() { finding = false; focusManager.clearFocus() }
+    /** Text null means "the same words again": that is how next and previous work. */
+    fun doFind(text: String?, flags: Int) {
+        val s = tab?.session ?: return
+        s.finder.find(text, flags).then(
+            object : GeckoResult.OnValueListener<GeckoSession.FinderResult, Void> {
+                override fun onValue(value: GeckoSession.FinderResult?): GeckoResult<Void>? {
+                    found = value
+                    return null
+                }
+            },
+        )
+    }
 
     val activity = LocalContext.current as? Activity
     val secure = active && tab?.incognito == true
@@ -116,13 +140,35 @@ fun BrowseTab(browser: Browser, active: Boolean) {
         if (secure) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         onDispose { if (secure) activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
     }
-    LaunchedEffect(browser.selectedId) { editing = false }
+    LaunchedEffect(browser.selectedId) { editing = false; finding = false }
     LaunchedEffect(tab?.id, tab?.session, tab?.crashed) {
         if (tab != null && tab.session == null && tab.url.isNotEmpty() && !tab.crashed) browser.ensure(tab)
     }
     LaunchedEffect(editing) { if (editing) focus.requestFocus() }
-    LaunchedEffect(active) { if (!active) leaveEdit() }
+    LaunchedEffect(active) { if (!active) { leaveEdit(); finding = false } }
+    LaunchedEffect(finding) {
+        if (finding) {
+            delay(80)
+            findFocus.requestFocus()
+        } else {
+            query = ""
+            found = null
+            tab?.session?.finder?.clear()
+        }
+    }
+    LaunchedEffect(query, finding) {
+        if (finding) {
+            if (query.isEmpty()) {
+                found = null
+                tab?.session?.finder?.clear()
+            } else {
+                delay(200)
+                doFind(query, GeckoSession.FINDER_FIND_FORWARD)
+            }
+        }
+    }
     BackHandler(enabled = active && editing) { leaveEdit() }
+    BackHandler(enabled = active && finding) { closeFind() }
     BackHandler(enabled = active && !editing && tab?.canBack == true) { browser.back() }
 
     val loading = tab?.loading == true
@@ -158,7 +204,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
         Row(
             (if (top) Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 80.dp)
             else Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().imePadding()
-                .padding(start = 16.dp, end = 16.dp, bottom = if (editing) 8.dp else 96.dp))
+                .padding(start = 16.dp, end = 16.dp, bottom = if (editing || finding) 8.dp else 96.dp))
                 .graphicsLayer {
                     // Test switch: the bars vanish while the page scrolls, to see whether the glass costs anything.
                     alpha = if (UiPrefs.testHide && UiPrefs.scrolling) 0f else 1f
@@ -167,10 +213,39 @@ fun BrowseTab(browser: Browser, active: Boolean) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (!editing) NavButton(Ic.Back, backdrop, enabled = tab?.canBack == true) { browser.back() }
+            if (!editing && !finding) NavButton(Ic.Back, backdrop, enabled = tab?.canBack == true) { browser.back() }
 
             LiquidField(backdrop, Modifier.weight(1f).height(48.dp)) {
-                if (editing) {
+                if (finding) {
+                    Icon(Ic.Search, Aura.Muted, Modifier.size(18.dp))
+                    Spacer(Modifier.size(8.dp))
+                    BasicTextField(
+                        query, { query = it }, Modifier.weight(1f).focusRequester(findFocus), singleLine = true, textStyle = tsg(15f),
+                        cursorBrush = SolidColor(Aura.Accent),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { doFind(null, GeckoSession.FINDER_FIND_FORWARD) }),
+                        decorationBox = { inner ->
+                            if (query.isEmpty()) BasicText("Find in page", style = tsg(15f, Aura.Muted))
+                            inner()
+                        },
+                    )
+                    val f = found
+                    if (query.isNotEmpty() && f != null) {
+                        BasicText(
+                            if (f.total > 0) "${f.current}/${f.total}" else "None",
+                            modifier = Modifier.padding(start = 8.dp), style = tsg(13f, Aura.Muted, FontWeight.Bold),
+                        )
+                    }
+                    Box(Modifier.semantics { contentDescription = "Previous match" }.pressable { doFind(null, GeckoSession.FINDER_FIND_BACKWARDS) }.padding(start = 10.dp, top = 8.dp, bottom = 8.dp)) {
+                        Icon(Ic.Chevron, Aura.Text, Modifier.size(20.dp).graphicsLayer { rotationZ = -90f })
+                    }
+                    Box(Modifier.semantics { contentDescription = "Next match" }.pressable { doFind(null, GeckoSession.FINDER_FIND_FORWARD) }.padding(start = 6.dp, top = 8.dp, bottom = 8.dp)) {
+                        Icon(Ic.Chevron, Aura.Text, Modifier.size(20.dp).graphicsLayer { rotationZ = 90f })
+                    }
+                    Box(Modifier.pressable { closeFind() }.padding(start = 10.dp, top = 8.dp, bottom = 8.dp)) {
+                        BasicText("Done", style = tsg(14f, Aura.AccentText, FontWeight.Bold))
+                    }
+                } else if (editing) {
                     Icon(Ic.Search, Aura.Muted, Modifier.size(18.dp))
                     Spacer(Modifier.size(10.dp))
                     BasicTextField(
@@ -213,11 +288,14 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                         Box(Modifier.pressable { if (loading) browser.stop() else browser.reload() }.padding(start = 10.dp)) {
                             Icon(if (loading) Ic.Close else Ic.Reload, Aura.Text, Modifier.size(20.dp))
                         }
+                        Box(Modifier.semantics { contentDescription = "Page menu" }.pressable { tab?.let { PageActions.pageMenu(browser, it) { finding = true } } }.padding(start = 12.dp)) {
+                            Icon(Ic.More, Aura.Text, Modifier.size(20.dp))
+                        }
                     }
                 }
             }
 
-            if (!editing) NavButton(Ic.Chevron, backdrop, enabled = tab?.canForward == true) { browser.forward() }
+            if (!editing && !finding) NavButton(Ic.Chevron, backdrop, enabled = tab?.canForward == true) { browser.forward() }
         }
     }
 }

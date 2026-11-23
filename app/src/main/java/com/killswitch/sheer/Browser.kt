@@ -109,6 +109,25 @@ class Browser(private val app: Context) {
         return t
     }
 
+    /** Hands text to Android's share sheet. */
+    fun share(text: String) {
+        val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text)
+        app.startActivity(android.content.Intent.createChooser(send, null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    fun copy(text: String, what: String) {
+        val cm = app.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("Sheer", text))
+        toast("$what copied")
+    }
+
+    /** A short message at the bottom of the screen. Safe to call from any thread. */
+    fun toast(text: String) {
+        main.post { android.widget.Toast.makeText(app, text, android.widget.Toast.LENGTH_SHORT).show() }
+    }
+
+    fun saveImage(url: String) = Downloads.saveUrl(this, app, url)
+
     fun select(id: Int) {
         if (tabs.none { it.id == id }) return
         selectedId = id
@@ -284,6 +303,12 @@ class Browser(private val app: Context) {
             override fun onTitleChange(session: GeckoSession, title: String?) {
                 t.title = title.orEmpty()
                 if (!t.incognito) { History.setTitle(app, t.url, t.title); scheduleSave() }
+            }
+            override fun onContextMenu(session: GeckoSession, screenX: Int, screenY: Int, element: GeckoSession.ContentDelegate.ContextElement) {
+                PageActions.contextMenu(this@Browser, t, element)
+            }
+            override fun onExternalResponse(session: GeckoSession, response: org.mozilla.geckoview.WebResponse) {
+                Downloads.save(this@Browser, app, response)
             }
             override fun onCrash(session: GeckoSession) { stopped(t, "crashed") }
             override fun onKill(session: GeckoSession) { stopped(t, "was killed") }

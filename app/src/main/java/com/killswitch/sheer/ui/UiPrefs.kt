@@ -35,6 +35,9 @@ object UiPrefs {
     /** Test: ask Android to run Sheer at 60 Hz. */
     var cap60 by mutableStateOf(false)
 
+    /** A page (usually a video) is showing fullscreen: the bars and the system bars go away until it ends. */
+    var fullscreen by mutableStateOf(false)
+
     /** True while the page is being scrolled and for a moment after. Only ever read while drawing, so it recomposes nothing. */
     var scrolling by mutableStateOf(false)
 }

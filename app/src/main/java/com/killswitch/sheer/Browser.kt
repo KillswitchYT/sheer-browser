@@ -51,6 +51,9 @@ class Browser(private val app: Context) {
     /** Set by the activity: opens the system file picker for a page's file field (types, several allowed, what to do with the result). */
     var filePicker: ((Array<String>, Boolean, (List<android.net.Uri>) -> Unit) -> Unit)? = null
 
+    /** Set by the activity: hides or shows the system bars and turns the screen to landscape for a fullscreen video. */
+    var setImmersive: ((Boolean) -> Unit)? = null
+
     /** Set by the activity: asks Android for runtime permissions (camera, microphone, location) and says whether they were all given. */
     var askAndroid: ((List<String>, (Boolean) -> Unit) -> Unit)? = null
 
@@ -130,6 +133,7 @@ class Browser(private val app: Context) {
 
     fun select(id: Int) {
         if (tabs.none { it.id == id }) return
+        if (com.killswitch.sheer.ui.UiPrefs.fullscreen) current?.session?.exitFullScreen()
         selectedId = id
         showCurrent()
         scheduleSave()
@@ -303,6 +307,11 @@ class Browser(private val app: Context) {
             override fun onTitleChange(session: GeckoSession, title: String?) {
                 t.title = title.orEmpty()
                 if (!t.incognito) { History.setTitle(app, t.url, t.title); scheduleSave() }
+            }
+            override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
+                if (fullScreen && t.id != selectedId) return
+                com.killswitch.sheer.ui.UiPrefs.fullscreen = fullScreen
+                setImmersive?.invoke(fullScreen)
             }
             override fun onContextMenu(session: GeckoSession, screenX: Int, screenY: Int, element: GeckoSession.ContentDelegate.ContextElement) {
                 PageActions.contextMenu(this@Browser, t, element)

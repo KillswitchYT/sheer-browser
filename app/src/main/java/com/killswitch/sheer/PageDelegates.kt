@@ -37,15 +37,22 @@ class PagePrompts(private val app: Context, private val browser: Browser, privat
     ): GeckoResult<PromptDelegate.PromptResponse> {
         val result = GeckoResult<PromptDelegate.PromptResponse>()
         var done = false
+        val kind = prompt.javaClass.simpleName
+        android.util.Log.w("SheerPrompt", "asking: $kind")
         val shown = Ask(title, message, yes, no, input, choices, multiple) { y, text, picked ->
             if (!done) {
                 done = true
                 runCatching { result.complete(answer(y, text, picked)) }
+                    .onSuccess { android.util.Log.w("SheerPrompt", "answered: $kind yes=$y") }
+                    .onFailure { android.util.Log.w("SheerPrompt", "answer failed: $kind", it) }
+            } else {
+                android.util.Log.w("SheerPrompt", "answer too late: $kind")
             }
         }
         // The page can take the question back (it navigated away): then the dialog goes too and nothing is sent.
         prompt.delegate = object : PromptDelegate.PromptInstanceDelegate {
             override fun onPromptDismiss(prompt: PromptDelegate.BasePrompt) {
+                android.util.Log.w("SheerPrompt", "the page took it back: $kind")
                 done = true
                 PageAsks.finish(shown)
             }

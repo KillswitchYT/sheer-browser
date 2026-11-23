@@ -187,7 +187,7 @@ fun SheerShell(browser: Browser, jump: Int) {
             }
         }
 
-        LiquidBottomTabs(
+        if (!UiPrefs.fullscreen) LiquidBottomTabs(
             selectedTabIndex = { tab }, onTabSelected = { switchTo(it) }, backdrop = barBackdrop, tabsCount = TABS.size,
             modifier = (if (barsTop) Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp)
             else Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp))

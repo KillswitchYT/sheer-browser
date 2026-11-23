@@ -1,6 +1,7 @@
 package com.killswitch.sheer
 
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.content.res.Configuration
@@ -12,6 +13,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.graphics.toArgb
 import com.killswitch.sheer.ui.Aura
 import com.killswitch.sheer.ui.SheerShell
@@ -45,6 +49,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun hookPageRequests() {
+        browser.setImmersive = { on ->
+            val c = WindowCompat.getInsetsController(window, window.decorView)
+            if (on) {
+                c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                c.hide(WindowInsetsCompat.Type.systemBars())
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            } else {
+                c.show(WindowInsetsCompat.Type.systemBars())
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
         browser.filePicker = { types, multiple, cb ->
             val mimes = types.filter { it.isNotBlank() }
             val i = Intent(Intent.ACTION_GET_CONTENT).apply {

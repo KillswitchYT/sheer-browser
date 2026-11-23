@@ -35,7 +35,7 @@ tap_text() { local pos; if pos=$(where "$1"); then echo "   tap \"$1\" at $pos";
 one() { # name, page, [tap-the-screen-first], then the texts to tap
   local name="$1" page="$2" first="$3"; shift 3
   echo; echo "=== $name"
-  adbx am force-stop "$PKG"; adbx pm clear "$PKG" > /dev/null; grant; sleep 1
+  adbx am force-stop "$PKG"; adbx pm clear "$PKG" > /dev/null; grant; adb logcat -c; sleep 1
   adbx am start -a android.intent.action.VIEW -d "http://localhost:8765/$page" -n "$PKG/.MainActivity" > /dev/null
   sleep 9
   case "$first" in
@@ -46,11 +46,13 @@ one() { # name, page, [tap-the-screen-first], then the texts to tap
   for t in "$@"; do
     case "$t" in
       type:*) adbx input text "${t#type:}" > /dev/null; sleep 3 ;;
+      key:*)  adbx input keyevent "${t#key:}" > /dev/null; sleep 1.5 ;;
       wait:*) sleep "${t#wait:}" ;;
       *) tap_text "$t"; sleep 1.5 ;;
     esac
   done
   shot "$name-2"
+  adb logcat -d -s SheerPrompt:W 2>&1 | tr -d '\r' | sed 's/^/   log: /' | tail -8
 }
 one alert    alert.html    no   OK
 one confirm  confirm.html  no   OK
@@ -60,6 +62,8 @@ one geo      geo.html      no   Allow wait:5
 one media    media.html    no   Allow wait:4
 one popup    popup.html    no   Allow
 one file     file.html     tap
+one promptfield prompt.html no Sam OK
+one fullscreen fullscreen.html tap key:KEYCODE_BACK wait:2
 one menu     menu.html     no   "Page menu" "Find in page" type:banana wait:2
 one linkmenu link.html     hold "Copy link"
 one imagemenu image.html   hold "Save image" wait:3

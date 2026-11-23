@@ -104,7 +104,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     // Bars at the top: the tab bar sits under the status bar (8 dp gap, 64 dp tall), the address row under it (8 dp gap, 48 dp tall).
-    val under = UiPrefs.pageUnder
+    val under = UiPrefs.pageUnder || UiPrefs.fullscreen
     // Page under the bars: the page fills the whole screen and the bars float over it, so no strip of background shows above or below it.
     // Off: the page stops where the bars end, and the bars sit on the dark scene.
     val pageTop = if (under) 0.dp else if (top) statusTop + 136.dp else statusTop
@@ -169,6 +169,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     }
     BackHandler(enabled = active && editing) { leaveEdit() }
     BackHandler(enabled = active && finding) { closeFind() }
+    BackHandler(enabled = active && UiPrefs.fullscreen) { tab?.session?.exitFullScreen() }
     BackHandler(enabled = active && !editing && tab?.canBack == true) { browser.back() }
 
     val loading = tab?.loading == true
@@ -201,7 +202,7 @@ fun BrowseTab(browser: Browser, active: Boolean) {
             },
         )
 
-        Row(
+        if (!UiPrefs.fullscreen) Row(
             (if (top) Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 80.dp)
             else Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().imePadding()
                 .padding(start = 16.dp, end = 16.dp, bottom = if (editing || finding) 8.dp else 96.dp))

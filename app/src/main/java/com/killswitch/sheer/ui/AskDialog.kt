@@ -33,8 +33,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
@@ -92,10 +90,8 @@ fun AskDialog(backdrop: Backdrop, ask: Ask) {
         }
     }
     var answered by remember { mutableStateOf(false) }
-    val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         enter.animateTo(1f, tween(240, easing = FastOutSlowInEasing))
-        if (ask.input != null) runCatching { focus.requestFocus() }
     }
     fun answer(yes: Boolean, one: String? = null) {
         if (answered) return
@@ -131,7 +127,7 @@ fun AskDialog(backdrop: Backdrop, ask: Ask) {
                 Spacer(Modifier.size(14.dp))
                 Box(Modifier.fillMaxWidth().background(Aura.overlay(.10f), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 14.dp)) {
                     BasicTextField(
-                        text, { text = it }, Modifier.fillMaxWidth().focusRequester(focus), singleLine = true, textStyle = ts(16f),
+                        text, { text = it }, Modifier.fillMaxWidth(), singleLine = true, textStyle = ts(16f),
                         cursorBrush = SolidColor(Aura.Accent),
                     )
                 }

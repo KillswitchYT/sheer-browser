@@ -16,20 +16,19 @@ adb install -r "$APK" 2>&1 | tail -1
 grant() { for p in ACCESS_FINE_LOCATION CAMERA RECORD_AUDIO; do adbx pm grant "$PKG" "android.permission.$p" > /dev/null; done; }  # skip Android's own box, the test is Sheer's
 
 shot() { adb exec-out screencap -p > "smoke-feat-$1.png" 2>/dev/null; echo "   screenshot smoke-feat-$1.png"; }
-# Where is the node with this exact text? (Sheer's dialogs are Compose, they show up in the accessibility dump.)
+# Where is the node with this exact text or description? (Sheer's dialogs are Compose, they show up in the accessibility dump.)
+# The dump fails now and then while something is animating, so it is tried up to three times.
 where() {
-  adbx uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb pull /sdcard/ui.xml ui.xml > /dev/null 2>&1
-  python3 - "$1" <<'PY'
-import re, sys, xml.etree.ElementTree as ET
-try: root = ET.parse('ui.xml').getroot()
-except Exception: sys.exit(1)
-for n in root.iter('node'):
-    if n.get('text') == sys.argv[1] or n.get('content-desc') == sys.argv[1]:
-        m = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', n.get('bounds'))
-        print((int(m[1]) + int(m[3])) // 2, (int(m[2]) + int(m[4])) // 2); sys.exit(0)
-sys.exit(1)
-PY
+  local try
+  for try in 1 2 3; do
+    rm -f ui.xml; adbx uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb pull /sdcard/ui.xml ui.xml > /dev/null 2>&1
+    python3 tools/ci/where.py "$1" ui.xml && return 0
+    sleep 1
+  done
+  return 1
 }
+# The emulator is slow and Android sometimes puts "Pixel Launcher isn't responding" over everything: press Wait so it does not hide the screen.
+clear_anr() { local pos; if pos=$(python3 tools/ci/where.py "Wait" ui.xml 2>/dev/null); then adbx input tap $pos > /dev/null; sleep 1; fi; }
 tap_text() { local pos; if pos=$(where "$1"); then echo "   tap \"$1\" at $pos"; adbx input tap $pos > /dev/null; else echo "   NO node with the text \"$1\""; fi; }
 
 one() { # name, page, [tap-the-screen-first], then the texts to tap
@@ -38,6 +37,7 @@ one() { # name, page, [tap-the-screen-first], then the texts to tap
   adbx am force-stop "$PKG"; adbx pm clear "$PKG" > /dev/null; grant; adb logcat -c; sleep 1
   adbx am start -a android.intent.action.VIEW -d "http://localhost:8765/$page" -n "$PKG/.MainActivity" > /dev/null
   sleep 9
+  adbx uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb pull /sdcard/ui.xml ui.xml > /dev/null 2>&1; clear_anr
   case "$first" in
     tap)  adbx input tap 540 1200 > /dev/null; sleep 2 ;;
     hold) adbx input swipe 540 1200 540 1200 1300 > /dev/null; sleep 2 ;;
@@ -47,6 +47,7 @@ one() { # name, page, [tap-the-screen-first], then the texts to tap
     case "$t" in
       type:*) adbx input text "${t#type:}" > /dev/null; sleep 3 ;;
       key:*)  adbx input keyevent "${t#key:}" > /dev/null; sleep 1.5 ;;
+      xy:*)   adbx input tap ${t#xy:} > /dev/null; sleep 2 ;;
       wait:*) sleep "${t#wait:}" ;;
       *) tap_text "$t"; sleep 1.5 ;;
     esac
@@ -63,7 +64,9 @@ one media    media.html    no   Allow wait:4
 one popup    popup.html    no   Allow
 one file     file.html     tap
 one promptfield prompt.html no Sam OK
-one fullscreen fullscreen.html tap key:KEYCODE_BACK wait:2
+one prompttick prompttick.html no OK wait:3
+one bookmark menu.html no "Page menu" "Add bookmark" xy:661,2210 Bookmarks
+one fullscreen fullscreen.html tap key:KEYCODE_BACK key:KEYCODE_BACK wait:2
 one menu     menu.html     no   "Page menu" "Find in page" type:banana wait:2
 one linkmenu link.html     hold "Copy link"
 one imagemenu image.html   hold "Save image" wait:3

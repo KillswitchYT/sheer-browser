@@ -27,12 +27,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.killswitch.sheer.Bookmarks
 import com.killswitch.sheer.Browser
 import com.killswitch.sheer.History
 import com.killswitch.sheer.UrlInput
@@ -69,6 +71,11 @@ fun HistoryTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOp
     var rows by remember { mutableStateOf<List<History.Visit>?>(null) } // null while the first read is running
     var confirm by remember { mutableStateOf(false) }
     val version = History.version
+    // The same screen also holds the pages the person bookmarked.
+    var showMarks by remember { mutableStateOf(false) }
+    var marks by remember { mutableStateOf<List<Bookmarks.Mark>?>(null) }
+    val marksVersion = Bookmarks.version
+    LaunchedEffect(query, marksVersion, showMarks) { if (showMarks) marks = withContext(Dispatchers.IO) { Bookmarks.query(ctx, query.trim(), 400) } }
 
     LaunchedEffect(query, version) { rows = withContext(Dispatchers.IO) { History.query(ctx, query.trim(), 400) } }
     LaunchedEffect(confirm) { if (confirm) { delay(4000); confirm = false } }
@@ -76,7 +83,16 @@ fun HistoryTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOp
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(0.dp)) {
         item {
             Column(Modifier.fillMaxWidth().staggerIn(0, seen.add("hist-head")), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                PageTitle("History", "Pages from normal tabs, kept on this phone only")
+                PageTitle(if (showMarks) "Bookmarks" else "History", if (showMarks) "Pages you kept, on this phone only" else "Pages from normal tabs, kept on this phone only")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for ((label, marksTab) in listOf("History" to false, "Bookmarks" to true)) {
+                        val on = showMarks == marksTab
+                        Box(
+                            Modifier.background(if (on) Aura.overlay(.16f) else Color.Transparent, RoundedCornerShape(50)).pressable { showMarks = marksTab }
+                                .padding(horizontal = 16.dp, vertical = 9.dp),
+                        ) { BasicText(label, style = ts(14f, if (on) Aura.Text else Aura.Muted, FontWeight.Bold)) }
+                    }
+                }
                 LiquidField(glassBackdrop(), Modifier.fillMaxWidth().height(48.dp)) {
                     Icon(Ic.Search, Aura.Muted, Modifier.size(18.dp))
                     Spacer(Modifier.size(10.dp))
@@ -84,7 +100,7 @@ fun HistoryTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOp
                         query, { query = it }, Modifier.weight(1f), singleLine = true, textStyle = ts(15f),
                         cursorBrush = SolidColor(Aura.Accent), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         decorationBox = { inner ->
-                            if (query.isEmpty()) BasicText("Search your history", style = ts(15f, Aura.Muted))
+                            if (query.isEmpty()) BasicText(if (showMarks) "Search your bookmarks" else "Search your history", style = ts(15f, Aura.Muted))
                             inner()
                         },
                     )
@@ -96,6 +112,28 @@ fun HistoryTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOp
             }
         }
 
+        if (showMarks) {
+            val m = marks
+            when {
+                m == null -> item { Spacer(Modifier.height(40.dp)) }
+                m.isEmpty() && query.isBlank() -> item {
+                    EmptyState(Ic.Star, "No bookmarks yet", "Open the three-dot menu on a page and choose Add bookmark.", "Open a page", onOpen)
+                }
+                m.isEmpty() -> item { NoResults("Nothing in your bookmarks matches \"${query.trim()}\".") }
+                else -> itemsIndexed(m, key = { _, b -> b.url }) { _, b ->
+                    Row(Modifier.fillMaxWidth().topHairline(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).pressable { browser.go(b.url); onOpen() }.padding(vertical = 14.dp, horizontal = 4.dp)) {
+                            BasicText(
+                                b.title.ifEmpty { UrlInput.host(b.url) },
+                                style = ts(16f, weight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                            BasicText(UrlInput.host(b.url), style = ts(13f, Aura.Muted), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Box(Modifier.pressable { Bookmarks.remove(ctx, b.url) }.padding(14.dp)) { Icon(Ic.Close, Aura.Muted, Modifier.size(18.dp)) }
+                    }
+                }
+            }
+        } else {
         val list = rows
         when {
             // Loading: quiet placeholder rows in the shape of the real ones.
@@ -138,6 +176,7 @@ fun HistoryTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOp
                     }
                 }
             }
+        }
         }
     }
 }

@@ -9,20 +9,26 @@ import org.mozilla.geckoview.GeckoSession
 object PageActions {
     /** [onFind] opens the find bar, which lives in the Browse screen. */
     fun pageMenu(browser: Browser, tab: BTab, onFind: () -> Unit) {
-        val rows = listOf(Choice("share", "Share"), Choice("find", "Find in page"), Choice("copy", "Copy link"))
         val title = tab.title.ifEmpty { UrlInput.host(tab.url) }.take(80)
-        PageAsks.show(
-            Ask(title, UrlInput.host(tab.url), no = "Close", choices = rows) { yes, _, picked ->
-                if (yes) {
-                    when (picked.firstOrNull()) {
-                        "share" -> browser.share(tab.url)
-                        "find" -> onFind()
-                        "copy" -> browser.copy(tab.url, "Link")
-                        else -> {}
+        browser.isBookmarked(tab.url) { marked ->
+            val rows = listOf(
+                Choice("bookmark", if (marked) "Remove bookmark" else "Add bookmark"),
+                Choice("share", "Share"), Choice("find", "Find in page"), Choice("copy", "Copy link"),
+            )
+            PageAsks.show(
+                Ask(title, UrlInput.host(tab.url), no = "Close", choices = rows) { yes, _, picked ->
+                    if (yes) {
+                        when (picked.firstOrNull()) {
+                            "bookmark" -> browser.toggleBookmark(tab.url, tab.title.ifEmpty { tab.url }, marked)
+                            "share" -> browser.share(tab.url)
+                            "find" -> onFind()
+                            "copy" -> browser.copy(tab.url, "Link")
+                            else -> {}
+                        }
                     }
-                }
-            },
-        )
+                },
+            )
+        }
     }
 
     /** What the long press landed on. A plain piece of text gets no menu. */

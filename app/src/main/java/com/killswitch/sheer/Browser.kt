@@ -131,6 +131,19 @@ class Browser(private val app: Context) {
 
     fun saveImage(url: String) = Downloads.saveUrl(this, app, url)
 
+    /** Is this page bookmarked? The answer arrives on the main thread. */
+    fun isBookmarked(url: String, done: (Boolean) -> Unit) = Bookmarks.has(app, url, done)
+
+    fun toggleBookmark(url: String, title: String, marked: Boolean) {
+        if (marked) {
+            Bookmarks.remove(app, url)
+            toast("Bookmark removed")
+        } else {
+            Bookmarks.add(app, url, title)
+            toast("Bookmark added")
+        }
+    }
+
     fun select(id: Int) {
         if (tabs.none { it.id == id }) return
         if (com.killswitch.sheer.ui.UiPrefs.fullscreen) current?.session?.exitFullScreen()

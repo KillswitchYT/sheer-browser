@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-enum class Ic { World, Setup, Plus, Chevron, Back, Reload, Tabs, Lock, Trash, Alert, Search, Close, Check, Copy, Shield, Info, Moon, Sun, Private, Clock, More }
+enum class Ic { World, Setup, Plus, Chevron, Back, Reload, Tabs, Lock, Trash, Alert, Search, Close, Check, Copy, Shield, Info, Moon, Sun, Private, Clock, More, Star }
 
 /** Tiny stroke icons drawn on a canvas, so the app needs no icon library. */
 @Composable
@@ -104,6 +104,18 @@ fun Icon(kind: Ic, color: Color, modifier: Modifier = Modifier.size(24.dp)) {
             Ic.Clock -> {
                 drawCircle(color, s * .38f, c, style = st)
                 line(.5f, .28f, .5f, .5f); line(.5f, .5f, .66f, .6f)
+            }
+            Ic.Star -> {
+                val p = Path()
+                for (i in 0 until 10) {
+                    val a = -Math.PI / 2 + i * Math.PI / 5
+                    val r = if (i % 2 == 0) .40f else .17f
+                    val x = s * (.5f + r * Math.cos(a).toFloat())
+                    val y = s * (.54f + r * Math.sin(a).toFloat())
+                    if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
+                }
+                p.close()
+                drawPath(p, color, style = st)
             }
             Ic.More -> for (x in listOf(.22f, .5f, .78f)) drawCircle(color, s * .075f, Offset(x * s, .5f * s))
             Ic.Sun -> {

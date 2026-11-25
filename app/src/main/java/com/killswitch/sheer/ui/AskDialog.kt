@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.killswitch.sheer.glass.LiquidPanel
@@ -93,9 +95,14 @@ fun AskDialog(backdrop: Backdrop, ask: Ask) {
     LaunchedEffect(Unit) {
         enter.animateTo(1f, tween(240, easing = FastOutSlowInEasing))
     }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     fun answer(yes: Boolean, one: String? = null) {
         if (answered) return
         answered = true
+        // Typing in the field took keyboard focus off the page. Give it up first so the page is itself again when the answer arrives.
+        focusManager.clearFocus()
+        keyboard?.hide()
         scope.launch {
             enter.animateTo(0f, tween(160, easing = FastOutSlowInEasing))
             ask.onAnswer(yes, text, if (one != null) listOf(one) else picked.toList())

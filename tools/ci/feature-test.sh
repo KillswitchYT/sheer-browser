@@ -22,14 +22,14 @@ where() {
   local try
   for try in 1 2 3; do
     rm -f ui.xml; adbx uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb pull /sdcard/ui.xml ui.xml > /dev/null 2>&1
-    python3 tools/ci/where.py "$1" ui.xml && return 0
+    python3 tools/ci/where.py "$1" ui.xml $2 && return 0
     sleep 1
   done
   return 1
 }
 # The emulator is slow and Android sometimes puts "Pixel Launcher isn't responding" over everything: press Wait so it does not hide the screen.
 clear_anr() { local pos; if pos=$(python3 tools/ci/where.py "Wait" ui.xml 2>/dev/null); then adbx input tap $pos > /dev/null; sleep 1; fi; }
-tap_text() { local pos; if pos=$(where "$1"); then echo "   tap \"$1\" at $pos"; adbx input tap $pos > /dev/null; else echo "   NO node with the text \"$1\""; fi; }
+tap_text() { local pos; if pos=$(where "$1" ${2:-}); then echo "   tap \"$1\" at $pos"; adbx input tap $pos > /dev/null; else echo "   NO node with the text \"$1\""; fi; }
 
 one() { # name, page, [tap-the-screen-first], then the texts to tap
   local name="$1" page="$2" first="$3"; shift 3
@@ -48,6 +48,7 @@ one() { # name, page, [tap-the-screen-first], then the texts to tap
       type:*) adbx input text "${t#type:}" > /dev/null; sleep 3 ;;
       key:*)  adbx input keyevent "${t#key:}" > /dev/null; sleep 1.5 ;;
       xy:*)   adbx input tap ${t#xy:} > /dev/null; sleep 2 ;;
+      last:*) tap_text "${t#last:}" last; sleep 2 ;;
       wait:*) sleep "${t#wait:}" ;;
       *) tap_text "$t"; sleep 1.5 ;;
     esac
@@ -65,8 +66,9 @@ one popup    popup.html    no   Allow
 one file     file.html     tap
 one promptfield prompt.html no Sam OK
 one prompttick prompttick.html no OK wait:3
-one bookmark menu.html no "Page menu" "Add bookmark" xy:661,2210 Bookmarks
-one fullscreen fullscreen.html tap key:KEYCODE_BACK key:KEYCODE_BACK wait:2
+one promptfieldtick prompttick.html no Sam OK wait:2
+one bookmark menu.html no "Page menu" "Add bookmark" last:History Bookmarks
+one fullscreen fullscreen.html tap "Got it" key:KEYCODE_BACK wait:2
 one menu     menu.html     no   "Page menu" "Find in page" type:banana wait:2
 one linkmenu link.html     hold "Copy link"
 one imagemenu image.html   hold "Save image" wait:3

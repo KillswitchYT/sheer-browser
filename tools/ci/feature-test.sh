@@ -78,5 +78,13 @@ one linkmenu link.html     hold "Copy link"
 one imagemenu image.html   hold "Save image" wait:3
 one download download.html tap  wait:4
 echo; echo "=== what ended up in Downloads"; adbx ls -l /sdcard/Download/
+echo; echo "=== ANR reports of Sheer (what the main thread was doing)"
+adbx dumpsys dropbox --print data_app_anr 2>&1 | tr -d '\r' > anr-dump.txt
+grep -c "Process: $PKG" anr-dump.txt | sed 's/^/   reports: /'
+awk -v p="$PKG" '/^Process: /{show=($2==p)} show' anr-dump.txt | grep -n -E "^Process:|^Subject:|Reason|\"main\" prio|^  at |Cpu usage|CPU usage|TOTAL|Load:|^ +[0-9.]+% [0-9]+/" | head -120
+echo; echo "=== memory and CPU right now"
+adbx cat /proc/meminfo | head -4
+adbx top -b -n 1 -m 10 2>&1 | head -16
+adbx dumpsys meminfo "$PKG" 2>&1 | grep -E "TOTAL|Native Heap|Dalvik Heap" | head -4
 kill $SRV 2>/dev/null
 echo; echo "feature test finished"

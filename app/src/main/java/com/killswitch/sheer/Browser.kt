@@ -112,6 +112,26 @@ class Browser(private val app: Context) {
         return t
     }
 
+    /** A new tab whose session goes back to the engine, which loads the page into it (an extension opening a page). */
+    fun sessionForNewTab(uri: String, incognito: Boolean): GeckoSession {
+        val nt = BTab(nextId++, uri, "", incognito)
+        val ns = makeSession(incognito)
+        attach(nt, ns)
+        nt.session = ns
+        tabs.add(nt)
+        selectedId = nt.id
+        return ns
+    }
+
+    /** Extensions (uBlock Origin among them) keep track of which tab is the one in front. */
+    private fun tellExtensions(old: GeckoSession?, new: GeckoSession?) {
+        runCatching {
+            val c = Gecko.runtime(app).webExtensionController
+            if (old != null && old !== new) c.setTabActive(old, false)
+            if (new != null) c.setTabActive(new, true)
+        }
+    }
+
     /** Hands text to Android's share sheet. */
     fun share(text: String) {
         val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text)
@@ -147,8 +167,10 @@ class Browser(private val app: Context) {
     fun select(id: Int) {
         if (tabs.none { it.id == id }) return
         if (com.killswitch.sheer.ui.UiPrefs.fullscreen) current?.session?.exitFullScreen()
+        val before = current?.session
         selectedId = id
         showCurrent()
+        tellExtensions(before, current?.session)
         scheduleSave()
     }
 

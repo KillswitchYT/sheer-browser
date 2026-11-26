@@ -117,6 +117,7 @@ class MainActivity : ComponentActivity() {
         window.decorView.setBackgroundColor(Aura.Ink.toArgb())
         Gecko.runtime(this)
         hookPageRequests()
+        Extensions.start(this, browser)
         if (b == null) open(intent) // a re-created activity still holds the old intent, do not open the link twice
         setContent { SheerShell(browser, jump.intValue) }
     }

@@ -20,3 +20,4 @@ The engine version is pinned in `gradle.properties`. `tools/run-engine-tests.sh`
 
 ## Credits
 Glass: Kyant0/AndroidLiquidGlass 2.0.1 and Kyant0/Shapes 1.2.1 (Apache-2.0, see `third_party/`). Engine: Mozilla GeckoView (MPL 2.0). Font: Plus Jakarta Sans.
+Ad blocker: uBlock Origin 1.77.0 by Raymond Hill (GPL-3.0), built in from `app/src/main/assets/extensions/ublock/`, unmodified except that the translations other than English and the Mozilla signature folder were left out. Its own `LICENSE.txt` is in that folder, its source is https://github.com/gorhill/uBlock.

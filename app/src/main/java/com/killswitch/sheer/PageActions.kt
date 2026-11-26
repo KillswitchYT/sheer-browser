@@ -14,7 +14,7 @@ object PageActions {
             val rows = listOf(
                 Choice("bookmark", if (marked) "Remove bookmark" else "Add bookmark"),
                 Choice("share", "Share"), Choice("find", "Find in page"), Choice("copy", "Copy link"),
-            )
+            ) + Extensions.withButton().map { (id, name) -> Choice("ext:$id", name) }
             PageAsks.show(
                 Ask(title, UrlInput.host(tab.url), no = "Close", choices = rows) { yes, _, picked ->
                     if (yes) {
@@ -23,7 +23,7 @@ object PageActions {
                             "share" -> browser.share(tab.url)
                             "find" -> onFind()
                             "copy" -> browser.copy(tab.url, "Link")
-                            else -> {}
+                            else -> { val pick = picked.firstOrNull().orEmpty(); if (pick.startsWith("ext:")) Extensions.press(pick.removePrefix("ext:")) }
                         }
                     }
                 },

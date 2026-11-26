@@ -101,8 +101,10 @@ fun AskDialog(backdrop: Backdrop, ask: Ask) {
         if (answered) return
         answered = true
         // Typing in the field took keyboard focus off the page. Give it up first so the page is itself again when the answer arrives.
-        focusManager.clearFocus()
-        keyboard?.hide()
+        if (ask.input != null) {
+            focusManager.clearFocus()
+            keyboard?.hide()
+        }
         scope.launch {
             enter.animateTo(0f, tween(160, easing = FastOutSlowInEasing))
             ask.onAnswer(yes, text, if (one != null) listOf(one) else picked.toList())

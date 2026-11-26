@@ -48,6 +48,7 @@ one() { # name, page, [tap-the-screen-first], then the texts to tap
       type:*) adbx input text "${t#type:}" > /dev/null; sleep 3 ;;
       key:*)  adbx input keyevent "${t#key:}" > /dev/null; sleep 1.5 ;;
       xy:*)   adbx input tap ${t#xy:} > /dev/null; sleep 2 ;;
+      swipe:*) adbx input swipe 540 1800 540 700 350 > /dev/null; sleep 1.5 ;;
       last:*) tap_text "${t#last:}" last; sleep 2 ;;
       wait:*) sleep "${t#wait:}" ;;
       *) tap_text "$t"; sleep 1.5 ;;
@@ -69,6 +70,9 @@ one prompttick prompttick.html no OK wait:3
 one promptfieldtick prompttick.html no Sam OK wait:2
 one bookmark menu.html no "Page menu" "Add bookmark" last:History Bookmarks
 one fullscreen fullscreen.html tap "Got it" key:KEYCODE_BACK wait:2
+one adblock    adblock.html  no   wait:11
+one extpopup   menu.html     no   "Page menu" "uBlock Origin" wait:5
+one extlist    menu.html     no   last:Settings swipe:up wait:1
 one menu     menu.html     no   "Page menu" "Find in page" type:banana wait:2
 one linkmenu link.html     hold "Copy link"
 one imagemenu image.html   hold "Save image" wait:3

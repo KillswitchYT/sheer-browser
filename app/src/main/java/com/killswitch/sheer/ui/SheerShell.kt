@@ -51,6 +51,7 @@ import com.killswitch.sheer.Settings
 import com.killswitch.sheer.glass.LiquidBottomTab
 import com.killswitch.sheer.glass.LiquidBottomTabs
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.killswitch.sheer.Extensions
 import com.kyant.backdrop.backdrops.rememberBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import kotlinx.coroutines.CoroutineStart
@@ -211,6 +212,7 @@ fun SheerShell(browser: Browser, jump: Int) {
         }
 
         dialog?.let { (t, m) -> NoticeDialog(barBackdrop, t, m) { dialog = null } }
+        Extensions.popup?.let { p -> key(p) { ExtensionPopupSheet(barBackdrop, p) } }
         PageAsks.current?.let { ask -> key(ask) { AskDialog(barBackdrop, ask) } }
     }
 }

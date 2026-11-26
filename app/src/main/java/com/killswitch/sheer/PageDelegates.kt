@@ -42,7 +42,7 @@ class PagePrompts(private val app: Context, private val browser: Browser, privat
         val shown = Ask(title, message, yes, no, input, choices, multiple) { y, text, picked ->
             if (!done) {
                 done = true
-                browser.view?.requestFocus()
+                if (input != null) browser.view?.requestFocus()
                 runCatching { result.complete(answer(y, text, picked)) }
                     .onSuccess { android.util.Log.w("SheerPrompt", "answered: $kind yes=$y") }
                     .onFailure { android.util.Log.w("SheerPrompt", "answer failed: $kind", it) }

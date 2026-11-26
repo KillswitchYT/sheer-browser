@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.killswitch.sheer.Browser
 import com.killswitch.sheer.CrashLog
+import com.killswitch.sheer.Extensions
 import com.killswitch.sheer.FrameMeter
 import com.killswitch.sheer.History
 import org.mozilla.geckoview.StorageController
@@ -197,6 +198,7 @@ private fun UpdateRows() {
 fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, String) -> Unit) {
     val ctx = LocalContext.current
     val sysDark = isSystemInDarkTheme()
+    LaunchedEffect(Unit) { Extensions.refresh() }
     var theme by remember { mutableIntStateOf(Settings.theme(ctx)) }
     var engine by remember { mutableIntStateOf(Settings.engine(ctx)) }
     var strict by remember { mutableStateOf(Settings.strictTracking(ctx)) }
@@ -255,7 +257,24 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
         }
 
         item {
-            Section(3, seen, "Search", "What the address bar uses for anything that is not a web address.") {
+            Section(3, seen, "Extensions", "Add-ons run inside the page engine. uBlock Origin comes with Sheer.") {
+                val exts = Extensions.list
+                exts.forEachIndexed { i, ext ->
+                    ToggleRow(
+                        Extensions.nameOf(ext),
+                        (if (ext.isBuiltIn) "Comes with Sheer" else "Added by you") + (ext.metaData?.version?.let { ", version $it" } ?: ""),
+                        Extensions.isOn(ext), i == 0,
+                    ) { Extensions.setOn(ext, it) }
+                    if (!ext.isBuiltIn) LinkRow(Ic.Trash, "Remove ${Extensions.nameOf(ext)}", false) { Extensions.remove(ext) }
+                }
+                if (exts.none { it.metaData?.name?.contains("Bitwarden", true) == true }) {
+                    LinkRow(Ic.Plus, "Add Bitwarden", exts.isEmpty()) { Extensions.install(Extensions.BITWARDEN_URL) }
+                }
+            }
+        }
+
+        item {
+            Section(4, seen, "Search", "What the address bar uses for anything that is not a web address.") {
                 UrlInput.ENGINES.forEachIndexed { i, e ->
                     Choice(e.name, if (e.name == "Google") "Google can log what you search." else null, engine == i, i == 0) {
                         engine = i; Settings.setEngine(ctx, i)
@@ -265,7 +284,7 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
         }
 
         item {
-            Section(4, seen, "Privacy", "Applied to every page, right away.") {
+            Section(5, seen, "Privacy", "Applied to every page, right away.") {
                 ToggleRow("Strict tracking protection", "Blocks trackers, fingerprinting and crypto miners.", strict, true) {
                     strict = it; Settings.flag(ctx, "etp", it); Gecko.applyTracking(ctx)
                 }
@@ -279,7 +298,7 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
         }
 
         item {
-            Section(5, seen, "Clear browsing data", "History is in the History tab. Cookies can be removed here but not listed.") {
+            Section(6, seen, "Clear browsing data", "History is in the History tab. Cookies can be removed here but not listed.") {
                 val gc = { Gecko.runtime(ctx).storageController }
                 ClearRow("Clear history", "Every page in the History tab.", true) { History.clear(ctx) }
                 ClearRow("Clear cookies and site data", "Logs you out of sites and removes what they stored.", false) {
@@ -298,11 +317,11 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
         }
 
         item {
-            Section(6, seen, "Updates", "Only when you tap. GitHub can see your IP address while it checks.") { UpdateRows() }
+            Section(7, seen, "Updates", "Only when you tap. GitHub can see your IP address while it checks.") { UpdateRows() }
         }
 
         item {
-            Section(7, seen, "About", "Sheer is the Firefox engine in a new coat.") {
+            Section(8, seen, "About", "Sheer is the Firefox engine in a new coat.") {
                 ValueRow("Version", version, true)
                 ValueRow("Engine", "Gecko", false)
                 LinkRow(Ic.Alert, "Recent stops", false) { onNotice("Recent stops", CrashLog.recent(ctx)) }

@@ -22,7 +22,7 @@ where() {
   local try
   for try in 1 2 3; do
     rm -f ui.xml; adbx uiautomator dump /sdcard/ui.xml > /dev/null 2>&1; adb pull /sdcard/ui.xml ui.xml > /dev/null 2>&1
-    python3 tools/ci/where.py "$1" ui.xml $2 && return 0
+    python3 tools/ci/where.py "$1" ui.xml ${2:-} && return 0
     sleep 1
   done
   return 1

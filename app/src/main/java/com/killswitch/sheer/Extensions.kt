@@ -47,10 +47,12 @@ object Extensions {
     fun start(context: Context, b: Browser) {
         app = context.applicationContext
         browser = b
+        Log.i("SheerExt", "start")
         controller.promptDelegate = installPrompts
         controller.ensureBuiltIn(UBLOCK_URI, UBLOCK_ID).then(
             object : GeckoResult.OnValueListener<WebExtension, Void> {
                 override fun onValue(value: WebExtension?): GeckoResult<Void>? {
+                    Log.i("SheerExt", "built-in ready: ${value?.id} enabled=${value?.metaData?.enabled}")
                     if (value != null) {
                         wire(value)
                         controller.setAllowedInPrivateBrowsing(value, true)
@@ -75,6 +77,7 @@ object Extensions {
             object : GeckoResult.OnValueListener<List<WebExtension>, Void> {
                 override fun onValue(value: List<WebExtension>?): GeckoResult<Void>? {
                     val all = value.orEmpty()
+                    Log.i("SheerExt", "installed: ${all.map { it.id }}")
                     all.forEach { wire(it) }
                     list = all
                     return null
@@ -156,6 +159,7 @@ object Extensions {
     }
 
     private fun popupFor(ext: WebExtension): GeckoResult<GeckoSession> {
+        Log.i("SheerExt", "popup of ${ext.id}")
         popup?.session?.close()
         val s = GeckoSession()
         s.open(Gecko.runtime(app!!))
@@ -166,6 +170,7 @@ object Extensions {
     private val actionDelegate = object : WebExtension.ActionDelegate {
         override fun onBrowserAction(extension: WebExtension, session: GeckoSession?, action: WebExtension.Action) {
             // The button as it is for the whole app. A page can give it its own look (a badge), that is not tracked.
+            Log.i("SheerExt", "toolbar button of ${extension.id}: title=${action.title} enabled=${action.enabled} forThisPage=${session != null}")
             if (session == null) {
                 buttons[extension.id] = action
                 version++

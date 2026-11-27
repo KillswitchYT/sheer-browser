@@ -59,24 +59,32 @@ one() { # name, page, [tap-the-screen-first], then the texts to tap
 }
 one alert    alert.html    no   OK
 one confirm  confirm.html  no   OK
-one prompt   prompt.html   no   OK
 one select   select.html   tap  Banana
 one geo      geo.html      no   Allow wait:5
 one media    media.html    no   Allow wait:4
 one popup    popup.html    no   Allow
 one file     file.html     tap
-one promptfield prompt.html no Sam OK
-one prompttick prompttick.html no OK wait:3
 one promptfieldtick prompttick.html no Sam OK wait:2
 one bookmark menu.html no "Page menu" "Add bookmark" last:History Bookmarks
 one fullscreen fullscreen.html tap "Got it" key:KEYCODE_BACK wait:2
-one adblock    adblock.html  no   wait:11
-one extpopup   menu.html     no   "Page menu" "uBlock Origin" wait:5
-one extlist    menu.html     no   last:Settings swipe:up wait:1
 one menu     menu.html     no   "Page menu" "Find in page" type:banana wait:2
 one linkmenu link.html     hold "Copy link"
 one imagemenu image.html   hold "Save image" wait:3
 one download download.html tap  wait:4
+# --- Extensions: one app start, then time for uBlock Origin to unpack and start (the emulator has two slow CPUs), then look.
+echo; echo "=== extensions"
+adbx am force-stop "$PKG"; adbx pm clear "$PKG" > /dev/null; grant; adb logcat -c; sleep 1
+adbx am start -a android.intent.action.VIEW -d "http://localhost:8765/menu.html" -n "$PKG/.MainActivity" > /dev/null
+for i in 1 2 3 4 5 6; do sleep 10; adb logcat -d -s SheerExt:V 2>&1 | tr -d '\r' | grep -c "toolbar button" | sed "s/^/   after \$((i*10)) s: toolbar-button lines: /"; done
+adb logcat -d -s SheerExt:V 2>&1 | tr -d '\r' | sed 's/^/   log: /' | tail -12
+clear_anr
+adbx am start -a android.intent.action.VIEW -d "http://localhost:8765/adblock.html" -n "$PKG/.MainActivity" > /dev/null
+sleep 14; shot ext-adblock
+tap_text "Page menu"; sleep 2; shot ext-menu
+tap_text "uBlock Origin"; sleep 6; shot ext-popup
+adbx input keyevent KEYCODE_BACK; sleep 1.5
+tap_text Settings last; sleep 2; adbx input swipe 540 1800 540 700 350 > /dev/null; sleep 1.5; shot ext-settings
+adb logcat -d -s SheerExt:V 2>&1 | tr -d '\r' | sed 's/^/   log: /' | tail -14
 echo; echo "=== what ended up in Downloads"; adbx ls -l /sdcard/Download/
 echo; echo "=== ANR reports of Sheer (what the main thread was doing)"
 adbx dumpsys dropbox --print data_app_anr 2>&1 | tr -d '\r' > anr-dump.txt

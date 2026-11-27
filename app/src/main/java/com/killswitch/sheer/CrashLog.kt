@@ -106,6 +106,19 @@ object CrashLog {
                 if (e.reason == ApplicationExitInfo.REASON_CRASH_NATIVE) {
                     runCatching { e.traceInputStream?.use { s -> readable(s.readBytes()).forEach { sb.append(it).append('\n') } } }
                 }
+                if (e.reason == ApplicationExitInfo.REASON_ANR) {
+                    // For a freeze, the useful part is what the main thread was busy with.
+                    runCatching {
+                        e.traceInputStream?.use { s ->
+                            val lines = s.bufferedReader().readLines()
+                            val i = lines.indexOfFirst { it.startsWith("\"main\" prio=") }
+                            if (i >= 0) {
+                                sb.append("The main thread was in:\n")
+                                lines.drop(i + 1).takeWhile { it.isNotBlank() }.take(40).forEach { sb.append(it.trim().take(130)).append('\n') }
+                            }
+                        }
+                    }
+                }
                 parts.add(sb.toString().take(3500))
             }
             Settings.setStr(c, "exit_seen", newest.toString())

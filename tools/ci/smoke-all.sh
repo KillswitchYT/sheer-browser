@@ -6,7 +6,8 @@ bash tools/ci/smoke-test.sh smoke-bottom.apk "$PKG" bottom "${SMOKE_MODE:-quick}
 b=0
 if [ -f smoke-top.apk ]; then bash tools/ci/smoke-test.sh smoke-top.apk "$PKG" top layout; b=$?; fi
 # What pages ask for (alerts, lists, location...): the screenshots are read by a person, they do not decide whether the build is good.
-if [ -f smoke-bottom.apk ]; then bash tools/ci/feature-test.sh smoke-bottom.apk "$PKG" || true; fi
+# Not run on every build any more (the owner tests features on the phone): run it by hand when a feature needs the emulator.
+# if [ -f smoke-bottom.apk ]; then bash tools/ci/feature-test.sh smoke-bottom.apk "$PKG" || true; fi
 # The compile experiment (tools/ci/compile-test.sh) has answered its question (compiling changed neither start nor scroll on the emulator), so it no longer runs every build.
 echo "bottom=$a top=$b"
 [ "$a" = 0 ] && [ "$b" = 0 ]

@@ -1,0 +1,103 @@
+Fetching distribution.
+Downloading https://github.com/gradle/gradle-distributions/releases/download/v9.7.1/gradle-9.7.1-bin.zip
+..............10%..............20%...............30%..............40%...............50%..............60%...............70%..............80%..............90%...............100%
+
+Welcome to Gradle 9.7.1!
+
+Here are the highlights of this release:
+ - Isolated Projects graduates to incubating
+ - Broader Configuration Cache compatibility
+ - Resilient Sync helps you fix broken builds
+ - More source locations in problem reports
+
+For more details see https://docs.gradle.org/9.7.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+WARNING: We recommend using a newer Android Gradle plugin to use compile SDK version 37.2
+
+This Android Gradle plugin (9.3.2) was tested up to compile SDK version 37.1.
+
+You are strongly encouraged to update your project to use a newer
+Android Gradle plugin that has been tested with compile SDK version 37.2.
+
+If you are already using the latest version of the Android Gradle plugin,
+you may need to wait until a newer version with support for compile SDK version 37.2 is available.
+
+For more information refer to the compatibility table:
+https://d.android.com/r/tools/api-level-support
+
+To suppress this warning, add/update
+    android.suppressUnsupportedCompileSdk=37.2
+to this project's gradle.properties.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:generateReleaseResValues
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libclearkey.so, libcrashhelper.so, libcrashtools.so, libfreebl3.so, libgkcodecs.so, liblgpllibs.so, libmozavcodec.so, libmozavutil.so, libmozglue.so, libnss3.so, libplugin-container.so, libsoftokn3.so, libxul.so. Run with --info option to learn more.
+
+> Task :app:processReleaseNavigationResources
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:javaPreCompileRelease
+> Task :app:parseReleaseLocalResources
+> Task :app:mergeReleaseArtProfile
+> Task :app:generateReleaseRFile
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:compileReleaseNavigationResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:mergeReleaseResources
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:extractProguardFiles
+> Task :app:mergeReleaseStartupProfile
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:processReleaseManifestForPackage
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:processReleaseResources
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:optimizeReleaseResources
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:compressReleaseAssets
+
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/sheer-browser/sheer-browser/app/src/main/java/com/killswitch/sheer/Extensions.kt:113:57 Unnecessary safe call on a non-null receiver of type 'WebExtension.MetaData'.
+w: file:///home/runner/work/sheer-browser/sheer-browser/app/src/main/java/com/killswitch/sheer/Extensions.kt:115:56 Unnecessary safe call on a non-null receiver of type 'WebExtension.MetaData'.
+w: file:///home/runner/work/sheer-browser/sheer-browser/app/src/main/java/com/killswitch/sheer/Extensions.kt:134:61 Unnecessary safe call on a non-null receiver of type 'WebExtension.MetaData'.
+w: file:///home/runner/work/sheer-browser/sheer-browser/app/src/main/java/com/killswitch/sheer/Extensions.kt:138:33 Unnecessary safe call on a non-null receiver of type 'WebExtension.MetaData'.
+w: file:///home/runner/work/sheer-browser/sheer-browser/app/src/main/java/com/killswitch/sheer/Extensions.kt:233:41 Unnecessary safe call on a non-null receiver of type 'WebExtension.MetaData'.
+w: file:///home/runner/work/sheer-browser/sheer-browser/app/src/main/java/com/killswitch/sheer/MainActivity.kt:80:27 The corresponding parameter in the supertype 'ComponentActivity' is named 'savedInstanceState'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/sheer-browser/sheer-browser/app/src/main/java/com/killswitch/sheer/ui/BrowseTab.kt:189:26 Unnecessary safe call on a non-null receiver of type 'BTab'.
+w: file:///home/runner/work/sheer-browser/sheer-browser/app/src/main/java/com/killswitch/sheer/ui/LibraryScreen.kt:87:100 Unnecessary safe call on a non-null receiver of type 'WebExtension.MetaData'.
+
+> Task :app:compileReleaseJavaWithJavac NO-SOURCE
+> Task :app:mergeReleaseGeneratedProguardFiles
+> Task :app:processReleaseJavaRes
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:mergeReleaseJavaResource
+> Task :app:produceReleaseComposeMapping
+> Task :app:reportReleaseComposeMappingErrors
+> Task :app:minifyReleaseWithR8
+> Task :app:mergeReleaseComposeMapping
+> Task :app:compileReleaseArtProfile
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+
+[Incubating] Problems report is available at: file:///home/runner/work/sheer-browser/sheer-browser/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 2m 34s
+46 actionable tasks: 46 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.7.1/userguide/configuration_cache_enabling.html

@@ -31,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.killswitch.sheer.Browser
 import com.killswitch.sheer.CrashLog
-import com.killswitch.sheer.Extensions
 import com.killswitch.sheer.FrameMeter
 import com.killswitch.sheer.History
 import org.mozilla.geckoview.StorageController
@@ -54,7 +53,7 @@ private fun Block(content: @Composable ColumnScope.() -> Unit) {
 
 /** A heading and one quiet line, then the block of that section. */
 @Composable
-private fun Section(index: Int, seen: MutableSet<Any>, title: String, sub: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun Section(index: Int, seen: MutableSet<Any>, title: String, sub: String, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().staggerIn(index, seen.add("set-sec-$index")), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.padding(start = 4.dp, top = 6.dp)) {
             BasicText(title, style = ts(19f, weight = FontWeight.ExtraBold))
@@ -82,7 +81,7 @@ private fun Choice(title: String, sub: String?, selected: Boolean, first: Boolea
 
 /** A name, one quiet line, and a library toggle. */
 @Composable
-private fun ToggleRow(title: String, sub: String, on: Boolean, first: Boolean, onChange: (Boolean) -> Unit) {
+internal fun ToggleRow(title: String, sub: String, on: Boolean, first: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier.fillMaxWidth().then(if (first) Modifier else Modifier.topHairline()).padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -108,7 +107,7 @@ private fun ValueRow(label: String, value: String, first: Boolean) {
 }
 
 @Composable
-private fun LinkRow(icon: Ic, title: String, first: Boolean, onClick: () -> Unit) {
+internal fun LinkRow(icon: Ic, title: String, first: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().pressable(onClick).then(if (first) Modifier else Modifier.topHairline()).padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -198,7 +197,6 @@ private fun UpdateRows() {
 fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onNotice: (String, String) -> Unit) {
     val ctx = LocalContext.current
     val sysDark = isSystemInDarkTheme()
-    LaunchedEffect(Unit) { Extensions.refresh() }
     var theme by remember { mutableIntStateOf(Settings.theme(ctx)) }
     var engine by remember { mutableIntStateOf(Settings.engine(ctx)) }
     var strict by remember { mutableStateOf(Settings.strictTracking(ctx)) }
@@ -252,23 +250,6 @@ fun SettingsTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onN
                 ToggleRow("Test: run at 60 Hz", "Asks Android for 60 Hz. Some phones ignore it, Smoothness shows what ran.", cap60, false) {
                     cap60 = it; Settings.flag(ctx, "cap60", it); UiPrefs.cap60 = it
                     (ctx as? android.app.Activity)?.let { a -> applyRefreshCap(a, it) }
-                }
-            }
-        }
-
-        item {
-            Section(3, seen, "Extensions", "Add-ons run inside the page engine. uBlock Origin comes with Sheer.") {
-                val exts = Extensions.list
-                exts.forEachIndexed { i, ext ->
-                    ToggleRow(
-                        Extensions.nameOf(ext),
-                        (if (ext.isBuiltIn) "Comes with Sheer" else "Added by you") + (ext.metaData?.version?.let { ", version $it" } ?: ""),
-                        Extensions.isOn(ext), i == 0,
-                    ) { Extensions.setOn(ext, it) }
-                    if (!ext.isBuiltIn) LinkRow(Ic.Trash, "Remove ${Extensions.nameOf(ext)}", false) { Extensions.remove(ext) }
-                }
-                if (exts.none { it.metaData?.name?.contains("Bitwarden", true) == true }) {
-                    LinkRow(Ic.Plus, "Add Bitwarden", exts.isEmpty()) { Extensions.install(Extensions.BITWARDEN_URL) }
                 }
             }
         }

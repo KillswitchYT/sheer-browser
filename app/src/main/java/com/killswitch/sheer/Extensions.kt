@@ -2,7 +2,11 @@ package com.killswitch.sheer
 
 import android.content.Context
 import android.util.Log
+import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -38,7 +42,13 @@ object Extensions {
 
     class Popup(val title: String, val session: GeckoSession)
 
+    /** Each extension's icon, once the engine has handed it over. */
+    val icons = mutableStateMapOf<String, ImageBitmap>()
+
     private val buttons = HashMap<String, WebExtension.Action>()
+
+    /** A page can give an extension's button its own look (uBlock Origin shows how many things it blocked there). */
+    private val pageButtons = java.util.WeakHashMap<GeckoSession, HashMap<String, WebExtension.Action>>()
     private var app: Context? = null
     private var browser: Browser? = null
 
@@ -49,6 +59,15 @@ object Extensions {
         browser = b
         Log.i("SheerExt", "start")
         controller.promptDelegate = installPrompts
+        controller.setAddonManagerDelegate(
+            object : WebExtensionController.AddonManagerDelegate {
+                override fun onInstalled(extension: WebExtension) { wire(extension); refresh() }
+                override fun onUninstalled(extension: WebExtension) { buttons.remove(extension.id); icons.remove(extension.id); refresh() }
+                override fun onEnabled(extension: WebExtension) { wire(extension); refresh() }
+                override fun onDisabled(extension: WebExtension) { refresh() }
+                override fun onReady(extension: WebExtension) { refresh() }
+            },
+        )
         controller.ensureBuiltIn(UBLOCK_URI, UBLOCK_ID).then(
             object : GeckoResult.OnValueListener<WebExtension, Void> {
                 override fun onValue(value: WebExtension?): GeckoResult<Void>? {
@@ -78,7 +97,7 @@ object Extensions {
                 override fun onValue(value: List<WebExtension>?): GeckoResult<Void>? {
                     val all = value.orEmpty()
                     Log.i("SheerExt", "installed: ${all.map { it.id }}")
-                    all.forEach { wire(it) }
+                    all.forEach { wire(it); loadIcon(it) }
                     list = all
                     return null
                 }
@@ -95,15 +114,36 @@ object Extensions {
 
     fun isOn(ext: WebExtension): Boolean = ext.metaData?.enabled == true
 
-    /** The extensions that have a toolbar button right now: (id, name). */
-    fun withButton(): List<Pair<String, String>> {
+    /** The button as it is for this page: the page's own look if the extension gave one, else the general one. */
+    fun buttonFor(id: String, session: GeckoSession?): WebExtension.Action? {
         @Suppress("UNUSED_VARIABLE") val v = version
-        return list.filter { isOn(it) && buttons[it.id]?.enabled != false && buttons.containsKey(it.id) }.map { it.id to nameOf(it) }
+        return session?.let { pageButtons[it]?.get(id) } ?: buttons[id]
     }
 
+    /** The little number on an extension's button, or empty. */
+    fun badgeOf(id: String, session: GeckoSession?): String = buttonFor(id, session)?.badgeText.orEmpty()
+
+    fun hasButton(id: String): Boolean = buttons.containsKey(id)
+
     /** A tap on an extension's toolbar button. The extension decides: a popup, or a click it handles itself. */
-    fun press(id: String) {
-        buttons[id]?.click()
+    fun press(id: String, session: GeckoSession?) {
+        buttonFor(id, session)?.click()
+    }
+
+    /** The extension's own settings page, if it has one. */
+    fun optionsOf(ext: WebExtension): String? = ext.metaData?.optionsPageUrl?.takeIf { it.isNotEmpty() }
+
+    private fun loadIcon(ext: WebExtension) {
+        if (icons.containsKey(ext.id)) return
+        val image = ext.metaData?.icon ?: return
+        image.getBitmap(96).then(
+            object : GeckoResult.OnValueListener<Bitmap, Void> {
+                override fun onValue(value: Bitmap?): GeckoResult<Void>? {
+                    if (value != null) icons[ext.id] = value.asImageBitmap()
+                    return null
+                }
+            },
+        )
     }
 
     fun closePopup() {
@@ -171,10 +211,9 @@ object Extensions {
         override fun onBrowserAction(extension: WebExtension, session: GeckoSession?, action: WebExtension.Action) {
             // The button as it is for the whole app. A page can give it its own look (a badge), that is not tracked.
             Log.i("SheerExt", "toolbar button of ${extension.id}: title=${action.title} enabled=${action.enabled} forThisPage=${session != null}")
-            if (session == null) {
-                buttons[extension.id] = action
-                version++
-            }
+            if (session == null) buttons[extension.id] = action
+            else pageButtons.getOrPut(session) { HashMap() }[extension.id] = action
+            version++
         }
 
         override fun onTogglePopup(extension: WebExtension, action: WebExtension.Action): GeckoResult<GeckoSession>? = popupFor(extension)

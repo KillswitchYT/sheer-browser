@@ -137,11 +137,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        browser.resume()
         FrameMeter.attach(this)
     }
 
     override fun onStop() {
         super.onStop()
+        browser.foreground = false
         FrameMeter.detach()
         browser.save()
     }

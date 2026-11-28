@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +30,10 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,7 +68,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.killswitch.sheer.BTab
 import com.killswitch.sheer.Browser
-import com.killswitch.sheer.PageActions
 import com.killswitch.sheer.UrlInput
 import com.killswitch.sheer.glass.LiquidButton
 import com.killswitch.sheer.glass.LiquidField
@@ -104,7 +109,9 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     // Bars at the top: the tab bar sits under the status bar (8 dp gap, 64 dp tall), the address row under it (8 dp gap, 48 dp tall).
-    val under = UiPrefs.pageUnder || UiPrefs.fullscreen
+    val under = UiPrefs.pageUnder || UiPrefs.fullscreen || UiPrefs.barsHidden
+    val haptic = LocalHapticFeedback.current
+    val hide = animateFloatAsState(if (UiPrefs.barsHidden || UiPrefs.fullscreen) 1f else 0f, tween(300, easing = FastOutSlowInEasing), label = "hideBars")
     // Page under the bars: the page fills the whole screen and the bars float over it, so no strip of background shows above or below it.
     // Off: the page stops where the bars end, and the bars sit on the dark scene.
     val pageTop = if (under) 0.dp else if (top) statusTop + 136.dp else statusTop
@@ -169,6 +176,8 @@ fun BrowseTab(browser: Browser, active: Boolean) {
     }
     BackHandler(enabled = active && editing) { leaveEdit() }
     BackHandler(enabled = active && finding) { closeFind() }
+    LaunchedEffect(UiPrefs.findRequest) { if (UiPrefs.findRequest > 0 && active && tab?.session != null) finding = true }
+    BackHandler(enabled = active && UiPrefs.barsHidden && !UiPrefs.fullscreen) { UiPrefs.barsHidden = false }
     BackHandler(enabled = active && UiPrefs.fullscreen) { tab?.session?.exitFullScreen() }
     BackHandler(enabled = active && !editing && tab?.canBack == true) { browser.back() }
 
@@ -208,7 +217,9 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                 .padding(start = 16.dp, end = 16.dp, bottom = if (editing || finding) 8.dp else 96.dp))
                 .graphicsLayer {
                     // Test switch: the bars vanish while the page scrolls, to see whether the glass costs anything.
-                    alpha = if (UiPrefs.testHide && UiPrefs.scrolling) 0f else 1f
+                    val h = hide.value
+                    alpha = (if (UiPrefs.testHide && UiPrefs.scrolling) 0f else 1f) * (1f - h)
+                    translationY = (if (top) -1f else 1f) * h * 140.dp.toPx()
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                 },
             verticalAlignment = Alignment.CenterVertically,
@@ -264,7 +275,14 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                     }
                 } else {
                     val host = UrlInput.host(tab?.url.orEmpty())
-                    Row(Modifier.weight(1f).fillMaxSize().pressable { startEdit() }, verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier.weight(1f).fillMaxSize().pillGestures(
+                            onTap = { startEdit() },
+                            onHold = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); UiPrefs.quickMenu = true },
+                            onSwipeDown = { UiPrefs.barsHidden = true },
+                        ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         if (tab?.incognito == true) {
                             Icon(Ic.Private, Aura.AccentText, Modifier.size(18.dp))
                             Spacer(Modifier.size(8.dp))
@@ -288,9 +306,6 @@ fun BrowseTab(browser: Browser, active: Boolean) {
                     if (tab?.session != null) {
                         Box(Modifier.pressable { if (loading) browser.stop() else browser.reload() }.padding(start = 10.dp)) {
                             Icon(if (loading) Ic.Close else Ic.Reload, Aura.Text, Modifier.size(20.dp))
-                        }
-                        Box(Modifier.semantics { contentDescription = "Page menu" }.pressable { tab?.let { PageActions.pageMenu(browser, it) { finding = true } } }.padding(start = 12.dp)) {
-                            Icon(Ic.More, Aura.Text, Modifier.size(20.dp))
                         }
                     }
                 }
@@ -360,3 +375,17 @@ private fun GeckoPage(browser: Browser, tab: BTab, modifier: Modifier) {
         },
     )
 }
+
+/** The address pill: a tap edits the address, a hold opens the quick menu, a pull down puts the bars away. */
+private fun Modifier.pillGestures(onTap: () -> Unit, onHold: () -> Unit, onSwipeDown: () -> Unit): Modifier = this
+    .pointerInput(Unit) { detectTapGestures(onTap = { onTap() }, onLongPress = { onHold() }) }
+    .pointerInput(Unit) {
+        var total = 0f
+        detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { total = 0f }, onDragCancel = { total = 0f }) { _, dy ->
+            total += dy
+            if (total > 28.dp.toPx()) {
+                total = Float.NEGATIVE_INFINITY // once per pull
+                onSwipeDown()
+            }
+        }
+    }

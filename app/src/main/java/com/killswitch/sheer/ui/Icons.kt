@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-enum class Ic { World, Setup, Plus, Chevron, Back, Reload, Tabs, Lock, Trash, Alert, Search, Close, Check, Copy, Shield, Info, Moon, Sun, Private, Clock, More, Star }
+enum class Ic { World, Setup, Plus, Chevron, Back, Reload, Tabs, Lock, Trash, Alert, Search, Close, Check, Copy, Shield, Info, Moon, Sun, Private, Clock, More, Star, Download, File, Share, Desktop, Puzzle }
 
 /** Tiny stroke icons drawn on a canvas, so the app needs no icon library. */
 @Composable
@@ -104,6 +104,32 @@ fun Icon(kind: Ic, color: Color, modifier: Modifier = Modifier.size(24.dp)) {
             Ic.Clock -> {
                 drawCircle(color, s * .38f, c, style = st)
                 line(.5f, .28f, .5f, .5f); line(.5f, .5f, .66f, .6f)
+            }
+            Ic.Download -> {
+                val a = Path(); a.moveTo(.5f * s, .16f * s); a.lineTo(.5f * s, .64f * s); drawPath(a, color, style = st)
+                val b = Path(); b.moveTo(.3f * s, .46f * s); b.lineTo(.5f * s, .66f * s); b.lineTo(.7f * s, .46f * s); drawPath(b, color, style = st)
+                val c = Path(); c.moveTo(.2f * s, .72f * s); c.lineTo(.2f * s, .84f * s); c.lineTo(.8f * s, .84f * s); c.lineTo(.8f * s, .72f * s); drawPath(c, color, style = st)
+            }
+            Ic.File -> {
+                val p = Path(); p.moveTo(.26f * s, .14f * s); p.lineTo(.58f * s, .14f * s); p.lineTo(.76f * s, .32f * s); p.lineTo(.76f * s, .86f * s); p.lineTo(.26f * s, .86f * s); p.close()
+                drawPath(p, color, style = st)
+                val f = Path(); f.moveTo(.58f * s, .14f * s); f.lineTo(.58f * s, .32f * s); f.lineTo(.76f * s, .32f * s); drawPath(f, color, style = st)
+            }
+            Ic.Share -> {
+                val a = Offset(.74f * s, .22f * s); val b = Offset(.26f * s, .5f * s); val c = Offset(.74f * s, .78f * s)
+                val p = Path(); p.moveTo(a.x, a.y); p.lineTo(b.x, b.y); p.lineTo(c.x, c.y); drawPath(p, color, style = st)
+                for (o in listOf(a, b, c)) drawCircle(color, s * .1f, o)
+            }
+            Ic.Desktop -> {
+                val p = Path(); p.moveTo(.14f * s, .22f * s); p.lineTo(.86f * s, .22f * s); p.lineTo(.86f * s, .66f * s); p.lineTo(.14f * s, .66f * s); p.close()
+                drawPath(p, color, style = st)
+                val b = Path(); b.moveTo(.36f * s, .82f * s); b.lineTo(.64f * s, .82f * s); drawPath(b, color, style = st)
+            }
+            Ic.Puzzle -> {
+                val p = Path(); p.moveTo(.2f * s, .32f * s); p.lineTo(.8f * s, .32f * s); p.lineTo(.8f * s, .84f * s); p.lineTo(.2f * s, .84f * s); p.close()
+                drawPath(p, color, style = st)
+                drawCircle(color, s * .09f, Offset(.5f * s, .2f * s), style = st)
+                drawCircle(color, s * .09f, Offset(.92f * s, .58f * s), style = st)
             }
             Ic.Star -> {
                 val p = Path()

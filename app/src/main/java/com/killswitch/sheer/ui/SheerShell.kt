@@ -21,6 +21,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +65,7 @@ import kotlinx.coroutines.launch
 
 private class TabInfo(val icon: Ic, val label: String)
 
-private val TABS = listOf(TabInfo(Ic.World, "Browse"), TabInfo(Ic.Tabs, "Tabs"), TabInfo(Ic.Clock, "History"), TabInfo(Ic.Setup, "Settings"))
+private val TABS = listOf(TabInfo(Ic.World, "Browse"), TabInfo(Ic.Tabs, "Tabs"), TabInfo(Ic.Download, "Downloads"), TabInfo(Ic.Setup, "Settings"))
 
 /**
  * The shell, built on the reference's: the scene the glass refracts, every tab built once and kept (a hidden tab is frozen and swallows
@@ -104,6 +109,7 @@ fun SheerShell(browser: Browser, jump: Int) {
     val arrivals = remember { mutableStateListOf<Int>().apply { repeat(TABS.size) { add(0) } } }
 
     fun switchTo(i: Int) {
+        UiPrefs.barsHidden = false
         if (i == shown) { tab = i; return }
         steps = kotlin.math.abs(i - shown).coerceAtLeast(1)
         dir = if (i > shown) 1 else -1
@@ -145,7 +151,7 @@ fun SheerShell(browser: Browser, jump: Int) {
         when (i) {
             0 -> BrowseTab(browser, active)
             1 -> TabsTab(browser, pad, seen, onOpen = { switchTo(0) })
-            2 -> HistoryTab(browser, pad, seen, onOpen = { switchTo(0) })
+            2 -> DownloadsTab(browser, pad, seen, onOpen = { switchTo(0) })
             else -> SettingsTab(browser, pad, seen, onNotice = { t, m -> dialog = t to m })
         }
     }
@@ -188,12 +194,15 @@ fun SheerShell(browser: Browser, jump: Int) {
             }
         }
 
+        val hideBars = animateFloatAsState(if (UiPrefs.barsHidden) 1f else 0f, tween(300, easing = FastOutSlowInEasing), label = "hideTabBar")
         if (!UiPrefs.fullscreen) LiquidBottomTabs(
             selectedTabIndex = { tab }, onTabSelected = { switchTo(it) }, backdrop = barBackdrop, tabsCount = TABS.size,
             modifier = (if (barsTop) Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp)
             else Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp))
                 .graphicsLayer {
-                    alpha = if (UiPrefs.testHide && UiPrefs.scrolling) 0f else 1f
+                    val h = hideBars.value
+                    alpha = (if (UiPrefs.testHide && UiPrefs.scrolling) 0f else 1f) * (1f - h)
+                    translationY = (if (barsTop) -1f else 1f) * h * 160.dp.toPx()
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                 },
         ) {
@@ -212,7 +221,24 @@ fun SheerShell(browser: Browser, jump: Int) {
         }
 
         dialog?.let { (t, m) -> NoticeDialog(barBackdrop, t, m) { dialog = null } }
+        if (UiPrefs.barsHidden && !UiPrefs.fullscreen && shown == 0) BarsHandle(barsTop)
+        if (UiPrefs.quickMenu) QuickMenu(browser, barBackdrop, openTab = { switchTo(it) })
+        UiPrefs.library?.let { w -> key(w) { LibraryScreen(browser, w, barBackdrop) } }
         Extensions.popup?.let { p -> key(p) { ExtensionPopupSheet(barBackdrop, p) } }
         PageAsks.current?.let { ask -> key(ask) { AskDialog(barBackdrop, ask) } }
+    }
+}
+
+/** The bars are swiped away: this little grip is what brings them back, with a tap or a pull down. */
+@Composable
+private fun BoxScope.BarsHandle(top: Boolean) {
+    val bring = { UiPrefs.barsHidden = false }
+    Box(
+        Modifier.align(if (top) Alignment.TopCenter else Alignment.BottomCenter).then(if (top) Modifier.statusBarsPadding() else Modifier.navigationBarsPadding())
+            .pointerInput(Unit) { detectTapGestures(onTap = { bring() }) }
+            .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (if (top) dy > 8f else dy < -8f) bring() } }
+            .padding(horizontal = 56.dp, vertical = 14.dp),
+    ) {
+        Box(Modifier.size(width = 52.dp, height = 6.dp).background(Aura.overlay(.55f), RoundedCornerShape(50)))
     }
 }

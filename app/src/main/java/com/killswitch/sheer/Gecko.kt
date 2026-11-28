@@ -33,6 +33,10 @@ object Gecko {
             .aboutConfigEnabled(false)
             .consoleOutput(false)
             .preferredColorScheme(colorScheme(app))
+            // Lets addons.mozilla.org offer "Add to Firefox" like normal Firefox (Sheer shows its own question first), and keeps extensions
+            // in a process of their own so a heavy one cannot stall the app.
+            .extensionsWebAPIEnabled(true)
+            .extensionsProcessEnabled(true)
             .build()
         return GeckoRuntime.create(app, settings).also { rt = it }
     }

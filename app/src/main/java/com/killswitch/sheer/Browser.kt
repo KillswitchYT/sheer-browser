@@ -33,6 +33,9 @@ class BTab(val id: Int, url: String, title: String, val incognito: Boolean = fal
     var crashed by mutableStateOf(false)
     var session by mutableStateOf<GeckoSession?>(null)
 
+    /** Asking sites for their computer version of the page. */
+    var desktop by mutableStateOf(false)
+
     /** When the page process last stopped under this tab, to tell a one-off from a loop. */
     var lastStop = 0L
 }
@@ -42,6 +45,16 @@ class Browser(private val app: Context) {
     val tabs = mutableStateListOf<BTab>()
     var selectedId by mutableIntStateOf(-1)
     private var nextId = 1
+
+    /** True while the app is on screen. Set by the activity. A page process that stops while the app is away is not a crash. */
+    var foreground = true
+
+    /** The app came back to the front: load the page again if Android took its process away meanwhile. */
+    fun resume() {
+        foreground = true
+        val t = current ?: return
+        if (t.session == null && !t.crashed && t.url.isNotEmpty()) ensure(t)
+    }
 
     /** The view currently showing a page, so a session can be let go of before it is closed. */
     var view: GeckoView? = null
@@ -216,9 +229,24 @@ class Browser(private val app: Context) {
         val s = makeSession(t.incognito)
         attach(t, s)
         s.open(Gecko.runtime(app))
+        if (t.desktop) applyDesktop(s, true)
         t.session = s
         if (t.url.isNotEmpty()) s.loadUri(t.url)
         return s
+    }
+
+    private fun applyDesktop(s: GeckoSession, on: Boolean) {
+        s.settings.userAgentMode = if (on) GeckoSessionSettings.USER_AGENT_MODE_DESKTOP else GeckoSessionSettings.USER_AGENT_MODE_MOBILE
+        s.settings.viewportMode = if (on) GeckoSessionSettings.VIEWPORT_MODE_DESKTOP else GeckoSessionSettings.VIEWPORT_MODE_MOBILE
+    }
+
+    /** Switch the page between the phone version and the computer version of the site. */
+    fun toggleDesktop() {
+        val t = current ?: return
+        val s = t.session ?: return
+        t.desktop = !t.desktop
+        applyDesktop(s, t.desktop)
+        s.reload()
     }
 
     /** A private session keeps its cookies and cache in memory only, and the engine forgets them when the last private page closes. */
@@ -264,17 +292,25 @@ class Browser(private val app: Context) {
      * a second stop within 30 seconds shows the "page crashed" screen instead, so it can never loop. Every stop is written to the log
      * that Settings, About, Recent stops shows.
      */
-    private fun stopped(t: BTab, how: String) {
+    /**
+     * The page process stopped. [killed] means Android took it to free memory, which is not a fault of the page: nothing is shown for it,
+     * and while the app is out of sight nothing is reloaded either (it loads again when the app comes back, see [resume]). Only a real crash
+     * in front of the person, twice in half a minute, shows the "page crashed" screen.
+     */
+    private fun stopped(t: BTab, how: String, killed: Boolean) {
         t.loading = false
         t.progress = 0
         CrashLog.event(app, "page process $how on ${if (t.incognito) "a private tab" else UrlInput.host(t.url).ifEmpty { "a blank tab" }}")
         val now = SystemClock.elapsedRealtime()
         val repeat = t.lastStop != 0L && now - t.lastStop < 30_000
-        t.lastStop = now
+        t.lastStop = if (foreground) now else 0L
         main.post { // not inside the engine's own callback
             dispose(t)
             if (t.id != selectedId) return@post // a background tab loads again when it is shown
-            if (repeat) t.crashed = true else if (t.url.isNotEmpty()) ensure(t)
+            if (!foreground) return@post // the app is away: resume() brings the page back
+            if (repeat) {
+                if (!killed) t.crashed = true // repeated kills in front stay quiet, the person can reload by hand
+            } else if (t.url.isNotEmpty()) ensure(t)
         }
     }
 
@@ -354,8 +390,8 @@ class Browser(private val app: Context) {
             override fun onExternalResponse(session: GeckoSession, response: org.mozilla.geckoview.WebResponse) {
                 Downloads.save(this@Browser, app, response)
             }
-            override fun onCrash(session: GeckoSession) { stopped(t, "crashed") }
-            override fun onKill(session: GeckoSession) { stopped(t, "was killed") }
+            override fun onCrash(session: GeckoSession) { stopped(t, "crashed", killed = false) }
+            override fun onKill(session: GeckoSession) { stopped(t, "was killed", killed = true) }
         }
     }
 }

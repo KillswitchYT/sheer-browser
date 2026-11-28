@@ -65,14 +65,14 @@ private fun timeLabel(t: Long): String = SimpleDateFormat("HH:mm", Locale.getDef
  * current tab, the cross removes one, and "Clear history" asks twice.
  */
 @Composable
-fun HistoryTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOpen: () -> Unit) {
+fun HistoryTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOpen: () -> Unit, startOnMarks: Boolean = false) {
     val ctx = LocalContext.current
     var query by remember { mutableStateOf("") }
     var rows by remember { mutableStateOf<List<History.Visit>?>(null) } // null while the first read is running
     var confirm by remember { mutableStateOf(false) }
     val version = History.version
     // The same screen also holds the pages the person bookmarked.
-    var showMarks by remember { mutableStateOf(false) }
+    var showMarks by remember { mutableStateOf(startOnMarks) }
     var marks by remember { mutableStateOf<List<Bookmarks.Mark>?>(null) }
     val marksVersion = Bookmarks.version
     LaunchedEffect(query, marksVersion, showMarks) { if (showMarks) marks = withContext(Dispatchers.IO) { Bookmarks.query(ctx, query.trim(), 400) } }
@@ -117,7 +117,7 @@ fun HistoryTab(browser: Browser, pad: PaddingValues, seen: MutableSet<Any>, onOp
             when {
                 m == null -> item { Spacer(Modifier.height(40.dp)) }
                 m.isEmpty() && query.isBlank() -> item {
-                    EmptyState(Ic.Star, "No bookmarks yet", "Open the three-dot menu on a page and choose Add bookmark.", "Open a page", onOpen)
+                    EmptyState(Ic.Star, "No bookmarks yet", "Hold the address bar on a page and choose Bookmark page.", "Open a page", onOpen)
                 }
                 m.isEmpty() -> item { NoResults("Nothing in your bookmarks matches \"${query.trim()}\".") }
                 else -> itemsIndexed(m, key = { _, b -> b.url }) { _, b ->

@@ -3,6 +3,7 @@ package com.killswitch.sheer.ui
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
@@ -37,6 +38,18 @@ object UiPrefs {
 
     /** A page (usually a video) is showing fullscreen: the bars and the system bars go away until it ends. */
     var fullscreen by mutableStateOf(false)
+
+    /** The quick menu (hold the address bar) is open. */
+    var quickMenu by mutableStateOf(false)
+
+    /** A full-screen page over the app: 0 History, 1 Bookmarks, 2 Extensions, or null for none. */
+    var library by mutableStateOf<Int?>(null)
+
+    /** The address bar and the tab bar have been swiped out of the way. */
+    var barsHidden by mutableStateOf(false)
+
+    /** Goes up when the quick menu asks for "Find in page"; the Browse screen opens its find bar. */
+    var findRequest by mutableIntStateOf(0)
 
     /** True while the page is being scrolled and for a moment after. Only ever read while drawing, so it recomposes nothing. */
     var scrolling by mutableStateOf(false)

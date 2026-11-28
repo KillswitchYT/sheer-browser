@@ -26,7 +26,8 @@ object Downloads {
         }
         val name = fileName(response.headers, response.uri)
         browser.toast("Downloading $name")
-        Thread { write(browser, app, name, mimeType(response.headers, name), body) }.start()
+        val source = hostOf(response.uri)
+        Thread { write(browser, app, name, mimeType(response.headers, name), body, source) }.start()
     }
 
     /** An image from the long-press menu: fetched with the engine's own network stack (same cookies), then saved. */
@@ -41,7 +42,8 @@ object Downloads {
                         return null
                     }
                     val name = fileName(value.headers, url)
-                    Thread { write(browser, app, name, mimeType(value.headers, name), body) }.start()
+                    val source = hostOf(url)
+                    Thread { write(browser, app, name, mimeType(value.headers, name), body, source) }.start()
                     return null
                 }
             },
@@ -54,7 +56,9 @@ object Downloads {
         )
     }
 
-    private fun write(browser: Browser, app: Context, name: String, mime: String, body: InputStream) {
+    private fun hostOf(u: String): String = runCatching { Uri.parse(u).host }.getOrNull().orEmpty().removePrefix("www.")
+
+    private fun write(browser: Browser, app: Context, name: String, mime: String, body: InputStream, source: String) {
         try {
             body.use { input ->
                 if (Build.VERSION.SDK_INT >= 29) {
@@ -67,15 +71,20 @@ object Downloads {
                     val res = app.contentResolver
                     val uri = res.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: throw IllegalStateException("no place to save")
                     try {
-                        res.openOutputStream(uri)!!.use { out -> input.copyTo(out) }
+                        val size = res.openOutputStream(uri)!!.use { out -> input.copyTo(out) }
                         res.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
+                        // The phone may have renamed it ("name (1).pdf") if there already was one.
+                        val shown = res.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null } ?: name
+                        DownloadLog.add(app, shown, mime, size, uri.toString(), source)
                     } catch (e: Exception) {
                         res.delete(uri, null, null)
                         throw e
                     }
                 } else {
                     val dir = app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: throw IllegalStateException("no folder")
-                    File(dir, name).outputStream().use { out -> input.copyTo(out) }
+                    val f = File(dir, name)
+                    val size = f.outputStream().use { out -> input.copyTo(out) }
+                    DownloadLog.add(app, name, mime, size, Uri.fromFile(f).toString(), source)
                 }
             }
             browser.toast("Saved to Downloads: $name")
